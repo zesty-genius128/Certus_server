@@ -1,0 +1,62 @@
+{
+  "name": "drug-shortage-mcp-server",
+  "version": "1.0.0",
+  "description": "Remote MCP server for FDA drug shortage information",
+  "type": "module",
+  "main": "official-mcp-server.js",
+  "scripts": {
+    "start": "node official-mcp-server.js",
+    "start:manual": "node manual-sse-server.js",
+    "start:simple": "node trial-server.js",
+    "start:official": "node official-mcp-server.js",
+    "start:https": "node https-server.js",
+    "start:stdio": "node stdio-wrapper.js",
+    "dev": "NODE_ENV=development nodemon server.js",
+    "dev:manual": "NODE_ENV=development nodemon manual-sse-server.js",
+    "dev:simple": "NODE_ENV=development nodemon trial-server.js",
+    "dev:official": "NODE_ENV=development nodemon official-mcp-server.js",
+    "dev:https": "NODE_ENV=development nodemon https-server.js",
+    "create-certs": "node create-certs.js",
+    "test": "node test-client.js",
+    "test:simple": "node trial-test.js",
+    "test:manual": "node manual-test.js",
+    "test:working": "node trial-test.js",
+    "test:stdio": "node test-stdio.js",
+    "test:https": "curl -k https://localhost:3443/health",
+    "inspect": "npx @modelcontextprotocol/inspector node stdio-wrapper.js",
+    "inspect:remote": "npx @modelcontextprotocol/inspector http://localhost:3000/mcp",
+    "build": "echo 'No build step required'",
+    "docker:build": "docker build -t drug-shortage-mcp .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env drug-shortage-mcp"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "eventsource": "^2.0.2",
+    "nodemon": "^3.1.10"
+  },
+  "keywords": [
+    "mcp",
+    "remote-mcp",
+    "drug-shortage",
+    "fda",
+    "healthcare",
+    "pharmacy",
+    "medication",
+    "sse",
+    "http"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
