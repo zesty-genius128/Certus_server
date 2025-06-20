@@ -1,0 +1,10 @@
+{
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "sleepPolicy": false,
+    "restartPolicyType": "ON_FAILURE"
+  }
+}
