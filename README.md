@@ -1,117 +1,220 @@
-# Drug Shortage MCP Server
+# Certus Remote Server
 
-Remote MCP server for FDA drug shortage information.
+A production-ready Model Context Protocol (MCP) server that provides real-time FDA drug shortage information. This server enables AI assistants and other MCP clients to search for current drug shortages using official FDA data.
 
----
+## Quick Start - Add to Claude Desktop
 
-## 🚀 After Cleanup
+### Step 1: Add to Claude Desktop Config
 
-Your project will be much cleaner with just the essential files. You'll have:
+Add this configuration to your Claude Desktop config file:
 
-✅ One working server (mentioned in the `package.json`)
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-✅ Core functionality (`openfda-client.js`)
+```json
+{
+  "mcpServers": {
+    "Certus": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://certus-server-production.up.railway.app/mcp"]
+    }
+  }
+}
+```
 
-✅ Local testing capability (`stdio-wrapper.js`)
+### Step 2: Restart Claude Desktop
 
-✅ Clean documentation (updated `README`)
+Close and reopen Claude Desktop completely. The drug shortage tool should now be available.
 
-This makes your project much more maintainable and easier to understand! 🎉
+### Step 3: Test the Integration
 
----
+In Claude Desktop, try asking:
 
-## Features
+- "Check for insulin shortages"
+- "Are there any current shortages for amoxicillin?"
+- "Search for morphine drug shortages"
 
-- Provides FDA drug shortage data via Model Context Protocol (MCP)
-- Multiple server modes: official, manual, simple, HTTPS, stdio
-- SSE (Server-Sent Events) support
-- Secure (HTTPS) and HTTP endpoints
-- Docker support
+## Deploy Your Own Server
 
-## Requirements
+### Prerequisites
 
-- Node.js >= 18.0.0
+- Node.js 18+
+- Railway account (free)
+- Git
 
-## Installation
+### Step 1: Clone and Setup
 
-1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/certus-server.git
+cd certus-server
+npm install
+```
 
-   ```sh
-   git clone <repo-url>
-   cd Certus_server
-   ```
+### Step 2: Test Locally (Optional)
 
-2. Install dependencies:
-
-   ```sh
-   npm install
-   ```
-
-## Usage
-
-### Start the Official MCP Server
-
-```sh
+```bash
+# Start the server
 npm start
-# or
-npm run start:official
+
+# Test in another terminal
+curl http://localhost:3000/health
 ```
 
-### Start the Simple Server
+### Step 3: Deploy to Railway
 
-```sh
-npm run start:simple
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Initialize project
+railway init
+
+# Deploy
+railway up
+
+# Get your URL
+railway domain
 ```
 
-### Start the Manual SSE Server
+### Step 4: Update Claude Config
 
-```sh
-npm run start:manual
+Replace the URL in your Claude config with your new Railway URL:
+
+```json
+{
+  "mcpServers": {
+    "Certus": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://your-app-name.up.railway.app/mcp"]
+    }
+  }
+}
 ```
 
-### Start the HTTPS Server
+## Available Tool
 
-```sh
-npm run start:https
+### `search_drug_shortages`
+
+Search for current drug shortages using FDA data.
+
+**Parameters:**
+
+- `drug_name` (string, required): Name of the drug (generic or brand name)
+- `limit` (integer, optional): Maximum results to return (1-50, default: 10)
+
+**Example Usage in Claude:**
+
+```text
+"Check for current shortages of insulin with a limit of 5 results"
 ```
 
-### Start the Stdio Wrapper Server
+## Configuration
 
-```sh
-npm run start:stdio
+### Environment Variables (Optional ***Read Note***)
+
+Create a `.env` file for better API rate limits:
+
+```bash
+OPENFDA_API_KEY=your_fda_api_key_here
 ```
 
-### Development Mode (with auto-reload)
+Get a free API key at: <https://open.fda.gov/apis/authentication/>
 
-```sh
-npm run dev
+- ***Note: This is not necessary unless you run into significant rate limits.***
+
+### Rate Limits
+
+- Without API Key: 1,000 requests/day
+- With API Key: 120,000 requests/day
+
+## Testing
+
+### Test with MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector https://certus-server-production.up.railway.app/mcp
 ```
 
-### Run Tests
+### Test with Direct API Call
 
-```sh
-npm test
+```bash
+curl -X POST https://certus-server-production.up.railway.app/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "search_drug_shortages",
+      "arguments": {"drug_name": "insulin", "limit": 5}
+    }
+  }'
 ```
 
-## Docker
+## Project Structure
 
-Build and run with Docker:
-
-```sh
-docker build -t drug-shortage-mcp .
-docker run -p 3000:3000 --env-file .env drug-shortage-mcp
+```text
+certus-server/
+├── official-mcp-server.js    # Main MCP server
+├── openfda-client.js         # FDA API integration
+├── stdio-wrapper.js          # Local testing support
+├── package.json              # Dependencies
+└── README.md                 # Documentation
 ```
 
-## Scripts
+## API Endpoints
 
-- `npm run create-certs` – Generate HTTPS certificates
-- `npm run inspect` – Inspect stdio server with MCP Inspector
-- `npm run inspect:remote` – Inspect remote server with MCP Inspector
+| Endpoint   | Method | Description               |
+|------------|--------|---------------------------|
+| `/health`  | GET    | Server health check       |
+| `/mcp`     | POST   | MCP JSON-RPC endpoint     |
+| `/mcp`     | GET    | MCP SSE endpoint          |
 
-## Environment Variables
+## Troubleshooting
 
-Create a `.env` file to set environment variables as needed.
+### Common Issues
+
+1. **Tool not appearing in Claude**: Restart Claude Desktop completely
+2. **Connection errors**: Check server status at `/health` endpoint
+3. **No results found**: Try different drug name variations
+4. **Rate limits**: Add an OpenFDA API key to your environment
+
+### Debug Commands
+
+```bash
+# Check server status
+curl https://your-app-name.up.railway.app/health
+
+# View Railway logs
+railway logs
+
+# Test MCP connection
+npx @modelcontextprotocol/inspector https://your-app-name.up.railway.app/mcp
+```
+
+## Use Cases
+
+- Healthcare applications checking drug availability
+- Pharmacy management systems monitoring supply chains
+- Clinical decision support alerting to shortages
+- AI assistants providing drug shortage information
+
+## Resources
+
+- [Model Context Protocol Documentation](https://github.com/modelcontextprotocol/specification)
+- [OpenFDA API Documentation](https://open.fda.gov/apis/)
+- [Railway Deployment Guide](https://docs.railway.app/)
 
 ## License
 
-MIT
+MIT License
+
+---
+
+**Live Server**: <https://certus-server-production.up.railway.app/mcp>  
+**Status**: Production Ready  
+**Protocol**: MCP 2024-11-05  
+**Data Source**: FDA Drug Shortages Database
