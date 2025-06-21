@@ -136,3 +136,4 @@ dist
 .pnp.*
 .DS_Store
 .railwayignore
+proxmox-readiness-report-1750537000528.json
