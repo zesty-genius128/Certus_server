@@ -10,7 +10,7 @@ import {
     CallToolRequestSchema,
     ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { searchDrugShortages } from './openfda-client.js';
+import { searchDrugShortages } from '../openfda-client.js';
 
 // Load environment variables
 dotenv.config();
