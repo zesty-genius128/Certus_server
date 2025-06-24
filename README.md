@@ -5,9 +5,11 @@ A comprehensive Model Context Protocol (MCP) server providing real-time FDA drug
 ## Quick Start - Add to Claude Desktop
 
 ### Step 1: Add to Claude Desktop Config
+
 Add this configuration to your Claude Desktop config file:
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
@@ -24,6 +26,7 @@ Add this configuration to your Claude Desktop config file:
 > **Note:** The `--allow-http` flag is only required if you are using an `http` URL. If your server URL starts with `https`, you do not need to include this flag.
 
 #### Alternative Configuration (Backup Server)
+
 If the main server is unavailable, use the Railway backup:
 
 ```json
@@ -38,9 +41,11 @@ If the main server is unavailable, use the Railway backup:
 ```
 
 ### Step 2: Restart Claude Desktop
+
 Close and reopen Claude Desktop completely. The drug information tools should now be available.
 
 ### Step 3: Test the Integration
+
 In Claude Desktop, try asking:
 
 - "Check for insulin shortages"
@@ -54,52 +59,64 @@ In Claude Desktop, try asking:
 ### Core Drug Information Tools
 
 #### `search_drug_shortages`
+
 Search for current drug shortages using FDA data with intelligent matching.
 
 **Parameters:**
+
 - `drug_name` (string, required): Name of the drug (generic or brand name)
 - `limit` (integer, optional): Maximum results to return (1-50, default: 10)
 
 #### `get_medication_profile`
+
 Get complete drug information including FDA label data and shortage status.
 
 **Parameters:**
+
 - `drug_identifier` (string, required): Drug name or identifier
 - `identifier_type` (string, optional): Type of identifier (default: "openfda.generic_name")
 
 #### `search_drug_recalls`
+
 Search for drug recalls using FDA enforcement database.
 
 **Parameters:**
+
 - `drug_name` (string, required): Drug name to search for recalls
 - `limit` (integer, optional): Maximum results (1-50, default: 10)
 
 #### `get_drug_label_info`
+
 Get FDA label information for a specific drug.
 
 **Parameters:**
+
 - `drug_identifier` (string, required): Drug identifier
 - `identifier_type` (string, optional): Type of identifier (default: "openfda.generic_name")
 
 ### Advanced Analysis Tools
 
 #### `analyze_drug_market_trends`
+
 Analyze drug shortage patterns and market trends over time.
 
 **Parameters:**
+
 - `drug_name` (string, required): Drug name to analyze
 - `months_back` (integer, optional): Analysis period in months (1-60, default: 12)
 
 #### `batch_drug_analysis`
+
 Analyze multiple drugs simultaneously for shortages, recalls, and risk assessment.
 
 **Parameters:**
+
 - `drug_list` (array, required): List of drug names (max 25 drugs)
 - `include_trends` (boolean, optional): Include trend analysis (default: false)
 
 ## Example Usage in Claude
 
-```
+```text
 Get a complete medication profile for insulin including any current shortages
 
 Analyze market trends for metformin over the past 6 months
@@ -114,18 +131,21 @@ Check shortage status and find alternatives for morphine
 ## Server Infrastructure
 
 ### Primary Deployment (Proxmox)
-- **Main Server:** http://certus.opensource.mieweb.com:80/mcp
-- **Status Check:** http://certus.opensource.mieweb.com:80/health
+
+- **Main Server:** <http://certus.opensource.mieweb.com:80/mcp>
+- **Status Check:** <http://certus.opensource.mieweb.com:80/health>
 - **Host:** Self-hosted Proxmox infrastructure
 
 ### Backup Deployment (Railway)
-- **Backup Server:** https://certus-server-production.up.railway.app/mcp
-- **Status Check:** https://certus-server-production.up.railway.app/health
+
+- **Backup Server:** <https://certus-server-production.up.railway.app/mcp>
+- **Status Check:** <https://certus-server-production.up.railway.app/health>
 - **Host:** Railway cloud platform
 
 ## Deploy Your Own Server
 
 ### Prerequisites
+
 - Node.js 18+
 - Railway account (free) or your own hosting
 - Git
@@ -181,6 +201,7 @@ railway domain
 ```
 
 ### Step 4: Deploy to Your Own Infrastructure
+
 For Proxmox or other self-hosted environments:
 
 ```bash
@@ -200,6 +221,7 @@ pm2 startup
 ```
 
 ### Step 5: Update Claude Config
+
 Replace the URL in your Claude config with your deployed URL:
 
 ```json
@@ -218,6 +240,7 @@ Replace the URL in your Claude config with your deployed URL:
 ## Configuration
 
 ### Environment Variables (Optional)
+
 Create a `.env` file for enhanced API performance:
 
 ```bash
@@ -228,6 +251,7 @@ PORT=3000
 Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 ### Rate Limits
+
 - Without API Key: 1,000 requests/day
 - With API Key: 120,000 requests/day
 - Intelligent Caching: Reduces API calls through smart result caching
@@ -292,7 +316,7 @@ curl -X POST http://certus.opensource.mieweb.com:80/mcp \
 
 ## Project Structure
 
-```
+```text
 Certus_server/
 ├── official-mcp-server.js    # Main MCP server implementation
 ├── openfda-client.js         # FDA API integration and data processing
@@ -315,21 +339,25 @@ Certus_server/
 ## Advanced Features
 
 ### Intelligent Drug Matching
+
 - Handles misspellings and variations automatically
 - Supports both generic and brand name searches
 - Provides relevance scoring for search results
 
 ### Comprehensive Data Integration
+
 - FDA Drug Shortages Database: Real-time shortage information
 - FDA Drug Labels Database: Complete prescribing information
 - FDA Enforcement Database: Drug recall and safety information
 
 ### Market Intelligence
+
 - Historical shortage pattern analysis
 - Risk assessment and forecasting
 - Alternative drug suggestions during shortages
 
 ### Batch Processing
+
 - Analyze up to 25 drugs simultaneously
 - Formulary-wide risk assessment
 - Bulk shortage monitoring
@@ -337,6 +365,7 @@ Certus_server/
 ## Troubleshooting
 
 ### Common Issues
+
 - **Tool not appearing in Claude:**
   - Restart Claude Desktop completely
   - Verify config file syntax is correct
@@ -373,24 +402,28 @@ npx @modelcontextprotocol/inspector http://certus.opensource.mieweb.com:80/mcp
 ## Use Cases
 
 ### Healthcare Applications
+
 - Clinical decision support systems
 - Electronic health record integration
 - Pharmacy management systems
 - Drug safety monitoring
 
 ### AI Assistant Integration
+
 - Real-time drug information queries
 - Medication counseling support
 - Healthcare chatbot enhancement
 - Clinical workflow automation
 
 ### Research and Analytics
+
 - Pharmaceutical market analysis
 - Drug shortage trend research
 - Supply chain risk assessment
 - Regulatory compliance monitoring
 
 ## Technical Specifications
+
 - **Protocol:** Model Context Protocol (MCP) 2024-11-05
 - **Data Sources:** FDA openFDA APIs
 - **Node.js:** 18+ required
@@ -399,6 +432,7 @@ npx @modelcontextprotocol/inspector http://certus.opensource.mieweb.com:80/mcp
 - **Rate Limiting:** Built-in intelligent throttling
 
 ## Resources
+
 - [Model Context Protocol Documentation](https://github.com/modelcontextprotocol/specification)
 - [OpenFDA API Documentation](https://open.fda.gov/apis/)
 - [Certus Server Repository](https://github.com/zesty-genius128/Certus_server)
