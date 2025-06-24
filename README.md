@@ -21,6 +21,8 @@ Add this configuration to your Claude Desktop config file:
 }
 ```
 
+> **Note:** The `--allow-http` flag is only required if you are using an `http` URL. If your server URL starts with `https`, you do not need to include this flag.
+
 #### Alternative Configuration (Backup Server)
 If the main server is unavailable, use the Railway backup:
 
@@ -210,6 +212,8 @@ Replace the URL in your Claude config with your deployed URL:
   }
 }
 ```
+
+> **Note:** The `--allow-http` flag is only required if you are using an `http` URL. If your server URL starts with `https`, you do not need to include this flag.
 
 ## Configuration
 
