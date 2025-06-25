@@ -17,7 +17,7 @@ import {
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 80;
+const PORT = process.env.PORT || 443;
 
 // Security and middleware
 app.use(helmet({
