@@ -251,7 +251,13 @@ app.post('/mcp', async (req, res) => {
                     }
                 };
                 break;
-
+            case "ping":
+                response.result = {
+                    status: "pong",
+                    timestamp: new Date().toISOString(),
+                    server: "openfda-drug-information-mcp-server"
+                };
+                break;
             case "tools/list":
                 response.result = {
                     tools: [
