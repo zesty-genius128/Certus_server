@@ -381,6 +381,7 @@ app.post('/mcp', async (req, res) => {
                         }
                     ]
                 };
+                break; // ← THIS WAS MISSING!
 
             case "tools/call":
                 const { name, arguments: args } = params;
