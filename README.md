@@ -8,6 +8,8 @@ A comprehensive Model Context Protocol (MCP) server providing real-time FDA drug
 
 Access real-time FDA drug information through a ChatGPT-like interface. No setup required - just visit the link and start asking about drug shortages, recalls, and medication information.
 
+> **Note:** If your search does not return results right away, try asking the chatbot to check the identifier type again. This is a known limitation of the current chatbot implementation, not a server issue.
+
 ## Key Features for Healthcare Professionals
 
 ### Real-Time Drug Shortage Information
