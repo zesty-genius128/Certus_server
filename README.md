@@ -2,6 +2,109 @@
 
 A comprehensive Model Context Protocol (MCP) server providing real-time FDA drug information including shortages, recalls, labels, and market analysis. This server enables AI assistants and other MCP clients to access comprehensive pharmaceutical data using official FDA sources.
 
+## Try the Live Chatbot
+
+**Test the Certus system immediately:** https://certus-chat.opensource.mieweb.org
+
+Access real-time FDA drug information through a ChatGPT-like interface. No setup required - just visit the link and start asking about drug shortages, recalls, and medication information.
+
+## Key Features for Healthcare Professionals
+
+### Real-Time Drug Shortage Information
+- Search current FDA drug shortage database by generic or brand name
+- Multiple search strategies to handle name variations and misspellings
+- Raw FDA shortage data with minimal processing for accuracy
+- Returns shortage reasons, resolution estimates, and affected product details when available
+
+### Comprehensive FDA Drug Label Data
+- Complete FDA-approved prescribing information and structured product labeling
+- Generic and brand name cross-referencing through openFDA identifiers
+- Dosage forms, strengths, routes of administration, and manufacturer information
+- Active ingredients, indications, contraindications, warnings, and adverse reactions
+
+### Drug Recall and Safety Information
+- Real-time search of FDA enforcement database for drug recalls
+- Recall classification (Class I, II, III), reason for recall, and affected lot information
+- Product descriptions, distribution information, and recall initiation dates
+- Raw FDA enforcement data for comprehensive recall analysis
+
+### Historical Data Analysis
+- Drug shortage pattern analysis using historical FDA shortage records
+- Configurable time periods for trend analysis (1-60 months)
+- Raw FDA data provided for custom analysis and interpretation
+- Minimal processing preserves data integrity for accurate analysis
+
+### Batch Processing Capabilities
+- Simultaneous analysis of up to 25 medications in a single request
+- Combined shortage, recall, and optional trend data for each drug
+- Efficient formulary-wide assessment with single API call
+- Structured results for each drug in the batch with error handling
+
+### Clinical Information Integration
+- Combined medication profiles with both FDA label and current shortage data
+- Intelligent search across multiple FDA identifier types (generic name, brand name, openFDA fields)
+- Cross-referenced data from FDA drug label and shortage databases
+- Streamlined access to comprehensive FDA medication information
+
+## How to Use the Chatbot
+
+Visit https://certus-chat.opensource.mieweb.org and ask questions like:
+
+**Drug Shortage Queries:**
+- "Check current shortage status for insulin"
+- "Search for metformin shortages"
+- "Show shortage information for lisinopril"
+- "Find shortage data for acetaminophen"
+
+**Medication Label Information:**
+- "Get FDA label information for metformin"
+- "Show prescribing information for atorvastatin"
+- "What are the approved uses for hydrochlorothiazide"
+- "Get dosage forms available for ibuprofen"
+
+**Drug Recall Searches:**
+- "Search for recalls involving insulin products"
+- "Check for any metformin recalls"
+- "Find recent recalls for blood pressure medications"
+- "Search recall database for acetaminophen"
+
+**Complete Medication Profiles:**
+- "Get complete medication profile for lisinopril"
+- "Show combined label and shortage data for insulin"
+- "Comprehensive information for metformin"
+
+**Trend Analysis:**
+- "Analyze shortage patterns for insulin over 12 months"
+- "Show shortage trends for metformin in the past 6 months"
+- "Historical shortage data for aspirin"
+
+**Batch Analysis:**
+- "Analyze these drugs for shortages: insulin, metformin, lisinopril"
+- "Check shortage status for multiple diabetes medications"
+- "Batch analysis of cardiovascular drugs with trend data"
+
+## Integration Options for Healthcare Systems
+
+### Web-Based Chatbot Interface
+Access the live chatbot at https://certus-chat.opensource.mieweb.org for immediate drug information queries without any setup required.
+
+### Claude Desktop Integration
+Add Certus tools directly to Claude Desktop for integrated AI assistant workflow with FDA drug data access.
+
+### Custom MCP Client Development
+Deploy the Certus server with any MCP-compatible client including:
+- LibreChat for custom healthcare chatbots
+- VS Code with MCP extensions for development environments
+- Custom applications using MCP client libraries
+- Third-party MCP-compatible tools and platforms
+
+### Direct API Integration
+Use REST API endpoints for custom healthcare applications:
+- HTTP POST to `/mcp` endpoint for JSON-RPC tool calls
+- Direct tool endpoints at `/tools/{tool_name}` for simple HTTP integration
+- Health monitoring via `/health` endpoint
+- Real-time data integration with existing systems
+
 ## Quick Start - Add to Claude Desktop
 
 ### Step 1: Add to Claude Desktop Config
@@ -17,7 +120,7 @@ Add this configuration to your Claude Desktop config file:
   "mcpServers": {
     "Certus": {
       "command": "npx",
-      "args": ["mcp-remote", "http://certus.opensource.mieweb.com:80/mcp", "--allow-http"]
+      "args": ["mcp-remote", "https://certus.opensource.mieweb.org/mcp"]
     }
   }
 }
@@ -48,11 +151,11 @@ Close and reopen Claude Desktop completely. The drug information tools should no
 
 In Claude Desktop, try asking:
 
-- "Check for insulin shortages"
+- "Check for insulin shortages in the FDA database"
 - "Get complete medication profile for metformin"
 - "Search for drug recalls involving acetaminophen"
-- "Analyze market trends for lisinopril"
-- "Find alternatives for drugs in shortage"
+- "Analyze shortage trends for lisinopril"
+- "Show me FDA label information for atorvastatin"
 
 ## Available Tools
 
@@ -60,87 +163,112 @@ In Claude Desktop, try asking:
 
 #### `search_drug_shortages`
 
-Search for current drug shortages using FDA data with intelligent matching.
+Search the FDA drug shortages database using intelligent matching strategies.
 
 **Parameters:**
 
 - `drug_name` (string, required): Name of the drug (generic or brand name)
 - `limit` (integer, optional): Maximum results to return (1-50, default: 10)
 
+**Returns:** Raw FDA shortage data including shortage reasons, estimated resolution dates, and affected products.
+
 #### `get_medication_profile`
 
-Get complete drug information including FDA label data and shortage status.
+Get comprehensive drug information combining FDA label data and current shortage status.
 
 **Parameters:**
 
 - `drug_identifier` (string, required): Drug name or identifier
 - `identifier_type` (string, optional): Type of identifier (default: "openfda.generic_name")
 
+**Returns:** Combined medication profile with both FDA label information and shortage data.
+
 #### `search_drug_recalls`
 
-Search for drug recalls using FDA enforcement database.
+Search the FDA enforcement database for drug recalls using multiple search strategies.
 
 **Parameters:**
 
 - `drug_name` (string, required): Drug name to search for recalls
 - `limit` (integer, optional): Maximum results (1-50, default: 10)
 
+**Returns:** Raw FDA enforcement data including recall classifications, reasons, and affected products.
+
 #### `get_drug_label_info`
 
-Get FDA label information for a specific drug.
+Retrieve FDA-approved drug label information and prescribing data.
 
 **Parameters:**
 
 - `drug_identifier` (string, required): Drug identifier
 - `identifier_type` (string, optional): Type of identifier (default: "openfda.generic_name")
 
+**Returns:** Complete FDA structured product labeling data.
+
 ### Advanced Analysis Tools
 
 #### `analyze_drug_market_trends`
 
-Analyze drug shortage patterns and market trends over time.
+Analyze drug shortage patterns using historical FDA shortage data.
 
 **Parameters:**
 
 - `drug_name` (string, required): Drug name to analyze
 - `months_back` (integer, optional): Analysis period in months (1-60, default: 12)
 
+**Returns:** Raw FDA shortage records for the specified time period with minimal processing for custom trend analysis.
+
 #### `batch_drug_analysis`
 
-Analyze multiple drugs simultaneously for shortages, recalls, and risk assessment.
+Simultaneously analyze multiple drugs for shortages, recalls, and optionally trends.
 
 **Parameters:**
 
 - `drug_list` (array, required): List of drug names (max 25 drugs)
 - `include_trends` (boolean, optional): Include trend analysis (default: false)
 
+**Returns:** Array of analysis results containing shortage data, recall data, and optionally trend data for each drug.
+
 ## Example Usage in Claude
 
 ```text
-Get a complete medication profile for insulin including any current shortages
+Search for current shortages of insulin and show me the raw FDA data
 
-Analyze market trends for metformin over the past 6 months
+Get the complete FDA medication profile for metformin including label and shortage information
 
-Search for any recalls involving blood pressure medications
+Search the FDA enforcement database for any recalls involving acetaminophen
 
-Perform batch analysis on these drugs: insulin, metformin, lisinopril, aspirin
+Analyze shortage patterns for lisinopril using historical FDA data from the past 6 months
 
-Check shortage status and find alternatives for morphine
+Perform batch analysis on these drugs: insulin, metformin, lisinopril, aspirin - include trend data
+
+Get FDA label information for atorvastatin and check current shortage status
 ```
 
 ## Server Infrastructure
 
 ### Primary Deployment (Proxmox)
 
-- **Main Server:** <http://certus.opensource.mieweb.com:80/mcp>
-- **Status Check:** <http://certus.opensource.mieweb.com:80/health>
-- **Host:** Self-hosted Proxmox infrastructure
+- **Main Server:** <https://certus.opensource.mieweb.org/mcp>
+- **Status Check:** <https://certus.opensource.mieweb.org/health>
+- **Host:** certus.opensource.mieweb.org
+- **Service:** OpenFDA MCP Server
+- **Tools Available:** 6 FDA drug information tools
+- **Protocol:** HTTPS with CORS enabled
 
 ### Backup Deployment (Railway)
 
 - **Backup Server:** <https://certus-server-production.up.railway.app/mcp>
 - **Status Check:** <https://certus-server-production.up.railway.app/health>
 - **Host:** Railway cloud platform
+
+### API Health Status
+
+Current FDA API endpoint availability:
+- **Drug Labels Database:** Operational (HTTP 200)
+- **Drug Shortages Database:** Operational (HTTP 404 responses indicate no current shortages, which is normal)
+- **Drug Enforcement Database:** Operational (HTTP 200)
+- **API Key Status:** Not configured (using public rate limits of 1,000 requests/day)
 
 ## Deploy Your Own Server
 
@@ -262,7 +390,7 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 ```bash
 # Test main server
-npx @modelcontextprotocol/inspector http://certus.opensource.mieweb.com:80/mcp
+npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
 
 # Test backup server
 npx @modelcontextprotocol/inspector https://certus-server-production.up.railway.app/mcp
@@ -275,20 +403,20 @@ npx @modelcontextprotocol/inspector http://localhost:3000/mcp
 
 ```bash
 # Check main server status
-curl http://certus.opensource.mieweb.com:80/health
+curl https://certus.opensource.mieweb.org/health
 
 # Check backup server status  
 curl https://certus-server-production.up.railway.app/health
 
 # Get available tools
-curl http://certus.opensource.mieweb.com:80/tools
+curl https://certus.opensource.mieweb.org/tools
 ```
 
 ### Direct API Testing
 
 ```bash
 # Test drug shortage search
-curl -X POST http://certus.opensource.mieweb.com:80/mcp \
+curl -X POST https://certus.opensource.mieweb.org/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -301,7 +429,7 @@ curl -X POST http://certus.opensource.mieweb.com:80/mcp \
   }'
 
 # Test medication profile
-curl -X POST http://certus.opensource.mieweb.com:80/mcp \
+curl -X POST https://certus.opensource.mieweb.org/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -336,31 +464,34 @@ Certus_server/
 | `/tools`   | GET    | List all available tools and schemas     |
 | `/`        | GET    | Server information and documentation     |
 
-## Advanced Features
+## Feature Deep-Dive:
 
 ### Intelligent Drug Matching
 
-- Handles misspellings and variations automatically
-- Supports both generic and brand name searches
-- Provides relevance scoring for search results
+- Multiple search strategies for drug name variations (generic, brand, openFDA fields)
+- Automatic fallback search methods when initial queries return no results
+- Handles common misspellings and name variations automatically
+- Search strategy reporting shows which method successfully found results
 
 ### Comprehensive Data Integration
 
-- FDA Drug Shortages Database: Real-time shortage information
-- FDA Drug Labels Database: Complete prescribing information
-- FDA Enforcement Database: Drug recall and safety information
+- **FDA Drug Shortages Database:** Real-time shortage information with reasons and estimated resolution
+- **FDA Drug Labels Database:** Complete structured product labeling and prescribing information  
+- **FDA Enforcement Database:** Drug recall and safety information with classification details
 
-### Market Intelligence
+### Minimal Processing Architecture
 
-- Historical shortage pattern analysis
-- Risk assessment and forecasting
-- Alternative drug suggestions during shortages
+- Raw FDA API responses preserved with minimal post-processing
+- Original openFDA JSON structure maintained for accurate data representation
+- Reduced data transformation overhead for better performance
+- Enhanced for AI analysis with structured but unmodified FDA data
 
 ### Batch Processing
 
-- Analyze up to 25 drugs simultaneously
-- Formulary-wide risk assessment
-- Bulk shortage monitoring
+- Analyze up to 25 drugs simultaneously in a single request
+- Combined shortage, recall, and optional trend analysis
+- Efficient API usage with intelligent request batching
+- Formulary-wide assessment capabilities
 
 ## Troubleshooting
 
@@ -371,7 +502,7 @@ Certus_server/
   - Verify config file syntax is correct
   - Check that the server URL is accessible
 - **Connection errors:**
-  - Test server health: `curl http://certus.opensource.mieweb.com:80/health`
+  - Test server health: `curl https://certus.opensource.mieweb.org/health`
   - Try backup server if main is down
   - Check firewall/network connectivity
 - **No results found:**
@@ -387,49 +518,53 @@ Certus_server/
 
 ```bash
 # Check server status and capabilities
-curl http://certus.opensource.mieweb.com:80/health
+curl https://certus.opensource.mieweb.org/health
 
 # View available tools
-curl http://certus.opensource.mieweb.com:80/tools
+curl https://certus.opensource.mieweb.org/tools
 
 # Test specific tool functionality
 npm run test
 
 # MCP protocol testing
-npx @modelcontextprotocol/inspector http://certus.opensource.mieweb.com:80/mcp
+npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
 ```
 
 ## Use Cases
 
 ### Healthcare Applications
 
-- Clinical decision support systems
-- Electronic health record integration
-- Pharmacy management systems
-- Drug safety monitoring
+- Real-time drug shortage monitoring and information retrieval
+- FDA drug label data integration for clinical systems
+- Drug recall notification and safety monitoring
+- Medication information lookup for clinical decision support
 
 ### AI Assistant Integration
 
-- Real-time drug information queries
-- Medication counseling support
-- Healthcare chatbot enhancement
-- Clinical workflow automation
+- Enhanced medical chatbots with FDA drug data access
+- Clinical workflow automation with drug information tools
+- Healthcare assistant applications with real-time drug data
+- Patient information systems with shortage and recall alerts
 
 ### Research and Analytics
 
-- Pharmaceutical market analysis
-- Drug shortage trend research
-- Supply chain risk assessment
-- Regulatory compliance monitoring
+- Pharmaceutical shortage pattern analysis using historical FDA data
+- Drug recall trend research and safety monitoring
+- Supply chain analysis using FDA shortage data
+- Regulatory compliance monitoring with automated FDA data access
 
 ## Technical Specifications
 
 - **Protocol:** Model Context Protocol (MCP) 2024-11-05
-- **Data Sources:** FDA openFDA APIs
+- **Data Sources:** FDA openFDA APIs (Drug Shortages, Labels, Enforcement)
+- **Server:** OpenFDA MCP Server v2.0.0
 - **Node.js:** 18+ required
-- **Dependencies:** Express, CORS, Helmet, Compression
-- **Response Format:** JSON-RPC 2.0
-- **Rate Limiting:** Built-in intelligent throttling
+- **Dependencies:** Express, CORS, Helmet, Compression, MCP SDK
+- **Response Format:** JSON-RPC 2.0 with raw FDA data
+- **Transport:** HTTP POST (JSON-RPC), SSE (Server-Sent Events), and stdio
+- **Rate Limiting:** FDA API public limits (1,000 requests/day without API key)
+- **Tools Available:** 6 FDA drug information tools
+- **CORS:** Enabled for cross-origin requests
 
 ## Resources
 
@@ -444,7 +579,8 @@ MIT License
 
 ---
 
-**Primary Server:** <http://certus.opensource.mieweb.com:80/mcp>  
+**Live Chatbot:** <https://certus-chat.opensource.mieweb.org>  
+**Primary Server:** <https://certus.opensource.mieweb.org/mcp>  
 **Backup Server:** <https://certus-server-production.up.railway.app/mcp>  
 **Status:** Production Ready  
 **Protocol:** MCP 2024-11-05  
