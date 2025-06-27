@@ -20,43 +20,15 @@ sequenceDiagram
     participant LibreChat
     participant StdioWrapper
     participant CertusMCP
-    participant OpenFDAClient
     participant FDAAPIs
 
-    User->>LibreChat: Query about drug information
+    User->>LibreChat: Ask about drug information
     LibreChat->>StdioWrapper: JSON-RPC request
-    StdioWrapper->>CertusMCP: HTTP POST to MCP endpoint
-    CertusMCP->>OpenFDAClient: Execute tool function
-    
-    loop Search Strategies
-        OpenFDAClient->>FDAAPIs: API request with strategy
-        FDAAPIs-->>OpenFDAClient: API response
-    end
-    
-    OpenFDAClient-->>CertusMCP: Raw FDA data
-    CertusMCP-->>StdioWrapper: MCP formatted response
+    StdioWrapper->>CertusMCP: HTTP POST /mcp
+    CertusMCP->>FDAAPIs: Search with multiple strategies
+    FDAAPIs-->>CertusMCP: Raw FDA data
+    CertusMCP-->>StdioWrapper: MCP response
     StdioWrapper-->>LibreChat: JSON-RPC result
-    LibreChat-->>User: Processed information
-
-    Note over User,FDAAPIs: Complex queries use parallel calls
-    
-    User->>LibreChat: Request comprehensive profile
-    LibreChat->>StdioWrapper: Multiple tool requests
-    
-    par
-        StdioWrapper->>CertusMCP: Get label data
-        CertusMCP->>OpenFDAClient: Label API call
-        OpenFDAClient->>FDAAPIs: Drug labels endpoint
-    and
-        StdioWrapper->>CertusMCP: Get shortage data
-        CertusMCP->>OpenFDAClient: Shortage API call
-        OpenFDAClient->>FDAAPIs: Drug shortages endpoint
-    end
-    
-    FDAAPIs-->>OpenFDAClient: Combined responses
-    OpenFDAClient-->>CertusMCP: Merged data
-    CertusMCP-->>StdioWrapper: Complete profile
-    StdioWrapper-->>LibreChat: Full dataset
     LibreChat-->>User: Medical information
 ```
 
