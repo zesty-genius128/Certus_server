@@ -8,72 +8,55 @@ A comprehensive Model Context Protocol (MCP) server providing real-time FDA drug
 
 Access real-time FDA drug information through a ChatGPT-like interface. No setup required - just visit the link and start asking about drug shortages, recalls, and medication information.
 
-> **Note:** If your search does not return results right away, try asking the chatbot to check the identifier type again. This is a known limitation of the current chatbot implementation, not a server issue.
-
 ## System Architecture
 
 ### Sequence Diagram
 
 ```mermaid
 sequenceDiagram
-    participant User as Physician
-    participant Chat as LibreChat
-    participant Wrapper as Stdio Wrapper
-    participant MCP as Certus MCP Server
-    participant Client as OpenFDA Client
-    participant FDA as FDA APIs
+    participant User
+    participant LibreChat
+    participant StdioWrapper
+    participant CertusMCP
+    participant OpenFDAClient
+    participant FDA
 
-    User->>Chat: Ask about drug shortages
-    Chat->>Chat: Parse query and select tools
-    Chat->>Wrapper: JSON-RPC via stdin
+    User->>LibreChat: Query about drug information
+    LibreChat->>StdioWrapper: JSON-RPC request
+    StdioWrapper->>CertusMCP: HTTP POST to /mcp
+    CertusMCP->>OpenFDAClient: Execute tool function
     
-    Wrapper->>Wrapper: Convert stdio to HTTP
-    Wrapper->>MCP: POST /mcp endpoint
-    
-    MCP->>MCP: Route to appropriate tool
-    MCP->>Client: Call search function
-    
-    Client->>Client: Build search strategies
-    loop Multiple Search Attempts
-        Client->>FDA: API request with strategy
-        FDA-->>Client: Response
-        alt No Results
-            Note right of Client: Try next strategy
-        else Results Found
-            break
-        end
+    loop Search Strategies
+        OpenFDAClient->>FDA: API request
+        FDA-->>OpenFDAClient: Response
+        break when results found
     end
     
-    Client-->>MCP: Raw FDA data
-    MCP->>MCP: Format MCP response
-    MCP-->>Wrapper: JSON-RPC result
-    
-    Wrapper->>Wrapper: Convert to stdio format
-    Wrapper-->>Chat: Response via stdout
-    
-    Chat->>Chat: Process data with AI
-    Chat-->>User: Present medical information
+    OpenFDAClient-->>CertusMCP: Raw FDA data
+    CertusMCP-->>StdioWrapper: MCP response
+    StdioWrapper-->>LibreChat: JSON-RPC result
+    LibreChat-->>User: Processed medical information
 
-    Note over User,FDA: Complex queries use multiple tools
+    Note over User,FDA: Complex queries use multiple parallel calls
     
-    User->>Chat: Request comprehensive drug profile
-    Chat->>Wrapper: Multiple tool calls
-    Wrapper->>MCP: Sequential requests
+    User->>LibreChat: Request comprehensive profile
+    LibreChat->>StdioWrapper: Multiple tool requests
     
-    par Label Data
-        MCP->>Client: Get label information
-        Client->>FDA: Drug label API
-        FDA-->>Client: Label data
-    and Shortage Data
-        MCP->>Client: Get shortage information
-        Client->>FDA: Drug shortage API
-        FDA-->>Client: Shortage data
+    par
+        StdioWrapper->>CertusMCP: Get label data
+        CertusMCP->>OpenFDAClient: Label API call
+        OpenFDAClient->>FDA: Drug labels endpoint
+    and
+        StdioWrapper->>CertusMCP: Get shortage data
+        CertusMCP->>OpenFDAClient: Shortage API call
+        OpenFDAClient->>FDA: Drug shortages endpoint
     end
     
-    Client-->>MCP: Combined data
-    MCP-->>Wrapper: Complete profile
-    Wrapper-->>Chat: Comprehensive information
-    Chat-->>User: Full drug analysis
+    FDA-->>OpenFDAClient: Combined responses
+    OpenFDAClient-->>CertusMCP: Merged data
+    CertusMCP-->>StdioWrapper: Complete profile
+    StdioWrapper-->>LibreChat: Full dataset
+    LibreChat-->>User: Comprehensive analysis
 ```
 
 ### Architecture Components
@@ -554,7 +537,7 @@ Certus_server/
 | `/tools`   | GET    | List all available tools and schemas     |
 | `/`        | GET    | Server information and documentation     |
 
-## Feature Deep-Dive:
+## Advanced Features
 
 ### Intelligent Drug Matching
 
