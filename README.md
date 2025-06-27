@@ -16,64 +16,64 @@ Access real-time FDA drug information through a ChatGPT-like interface. No setup
 
 ```mermaid
 sequenceDiagram
-    participant User as 👨‍⚕️ Physician/User
-    participant ChatBot as 🤖 LibreChat Interface
-    participant Wrapper as 🔧 Stdio Wrapper
-    participant MCP as 🏥 Certus MCP Server
-    participant Client as 📡 OpenFDA Client
-    participant FDA as 🏛️ FDA APIs
+    participant User as Physician
+    participant Chat as LibreChat
+    participant Wrapper as Stdio Wrapper
+    participant MCP as Certus MCP Server
+    participant Client as OpenFDA Client
+    participant FDA as FDA APIs
 
-    User->>ChatBot: "Check for insulin shortages"
-    ChatBot->>ChatBot: Parse user query & select tools
-    ChatBot->>Wrapper: JSON-RPC via stdin (tools/call)
+    User->>Chat: Ask about drug shortages
+    Chat->>Chat: Parse query and select tools
+    Chat->>Wrapper: JSON-RPC via stdin
     
-    Wrapper->>Wrapper: Convert stdio to HTTP request
-    Wrapper->>MCP: POST /mcp (JSON-RPC 2.0)
+    Wrapper->>Wrapper: Convert stdio to HTTP
+    Wrapper->>MCP: POST /mcp endpoint
     
-    MCP->>MCP: Route to search_drug_shortages tool
-    MCP->>Client: searchDrugShortages("insulin", 10)
+    MCP->>MCP: Route to appropriate tool
+    MCP->>Client: Call search function
     
     Client->>Client: Build search strategies
-    loop Multiple Search Strategies
-        Client->>FDA: GET /drug/shortages.json?search="insulin"
-        FDA-->>Client: FDA Response (JSON)
+    loop Multiple Search Attempts
+        Client->>FDA: API request with strategy
+        FDA-->>Client: Response
         alt No Results
-            Client->>FDA: GET with different strategy
-            FDA-->>Client: FDA Response (JSON)
+            Note right of Client: Try next strategy
         else Results Found
             break
         end
     end
     
-    Client-->>MCP: Raw FDA shortage data
+    Client-->>MCP: Raw FDA data
     MCP->>MCP: Format MCP response
-    MCP-->>Wrapper: JSON-RPC result with FDA data
+    MCP-->>Wrapper: JSON-RPC result
     
-    Wrapper->>Wrapper: Convert HTTP response to stdio
-    Wrapper-->>ChatBot: JSON-RPC result via stdout
+    Wrapper->>Wrapper: Convert to stdio format
+    Wrapper-->>Chat: Response via stdout
     
-    ChatBot->>ChatBot: Process FDA data with AI
-    ChatBot-->>User: "Found 3 insulin shortages with details..."
+    Chat->>Chat: Process data with AI
+    Chat-->>User: Present medical information
 
-    Note over User,FDA: Additional tool calls for comprehensive queries
-    User->>ChatBot: "Get complete profile for metformin"
-    ChatBot->>Wrapper: Multiple tool calls (get_medication_profile)
+    Note over User,FDA: Complex queries use multiple tools
+    
+    User->>Chat: Request comprehensive drug profile
+    Chat->>Wrapper: Multiple tool calls
     Wrapper->>MCP: Sequential requests
     
     par Label Data
-        MCP->>Client: fetchDrugLabelInfo("metformin")
-        Client->>FDA: GET /drug/label.json
+        MCP->>Client: Get label information
+        Client->>FDA: Drug label API
         FDA-->>Client: Label data
-    and Shortage Data  
-        MCP->>Client: searchDrugShortages("metformin")
-        Client->>FDA: GET /drug/shortages.json
+    and Shortage Data
+        MCP->>Client: Get shortage information
+        Client->>FDA: Drug shortage API
         FDA-->>Client: Shortage data
     end
     
-    Client-->>MCP: Combined profile data
-    MCP-->>Wrapper: Complete medication profile
-    Wrapper-->>ChatBot: Comprehensive drug information
-    ChatBot-->>User: "Complete metformin profile with FDA data"
+    Client-->>MCP: Combined data
+    MCP-->>Wrapper: Complete profile
+    Wrapper-->>Chat: Comprehensive information
+    Chat-->>User: Full drug analysis
 ```
 
 ### Architecture Components
