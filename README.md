@@ -10,6 +10,94 @@ Access real-time FDA drug information through a ChatGPT-like interface. No setup
 
 > **Note:** If your search does not return results right away, try asking the chatbot to check the identifier type again. This is a known limitation of the current chatbot implementation, not a server issue.
 
+## System Architecture
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant User as 👨‍⚕️ Physician/User
+    participant ChatBot as 🤖 LibreChat Interface
+    participant Wrapper as 🔧 Stdio Wrapper
+    participant MCP as 🏥 Certus MCP Server
+    participant Client as 📡 OpenFDA Client
+    participant FDA as 🏛️ FDA APIs
+
+    User->>ChatBot: "Check for insulin shortages"
+    ChatBot->>ChatBot: Parse user query & select tools
+    ChatBot->>Wrapper: JSON-RPC via stdin (tools/call)
+    
+    Wrapper->>Wrapper: Convert stdio to HTTP request
+    Wrapper->>MCP: POST /mcp (JSON-RPC 2.0)
+    
+    MCP->>MCP: Route to search_drug_shortages tool
+    MCP->>Client: searchDrugShortages("insulin", 10)
+    
+    Client->>Client: Build search strategies
+    loop Multiple Search Strategies
+        Client->>FDA: GET /drug/shortages.json?search="insulin"
+        FDA-->>Client: FDA Response (JSON)
+        alt No Results
+            Client->>FDA: GET with different strategy
+            FDA-->>Client: FDA Response (JSON)
+        else Results Found
+            break
+        end
+    end
+    
+    Client-->>MCP: Raw FDA shortage data
+    MCP->>MCP: Format MCP response
+    MCP-->>Wrapper: JSON-RPC result with FDA data
+    
+    Wrapper->>Wrapper: Convert HTTP response to stdio
+    Wrapper-->>ChatBot: JSON-RPC result via stdout
+    
+    ChatBot->>ChatBot: Process FDA data with AI
+    ChatBot-->>User: "Found 3 insulin shortages with details..."
+
+    Note over User,FDA: Additional tool calls for comprehensive queries
+    User->>ChatBot: "Get complete profile for metformin"
+    ChatBot->>Wrapper: Multiple tool calls (get_medication_profile)
+    Wrapper->>MCP: Sequential requests
+    
+    par Label Data
+        MCP->>Client: fetchDrugLabelInfo("metformin")
+        Client->>FDA: GET /drug/label.json
+        FDA-->>Client: Label data
+    and Shortage Data  
+        MCP->>Client: searchDrugShortages("metformin")
+        Client->>FDA: GET /drug/shortages.json
+        FDA-->>Client: Shortage data
+    end
+    
+    Client-->>MCP: Combined profile data
+    MCP-->>Wrapper: Complete medication profile
+    Wrapper-->>ChatBot: Comprehensive drug information
+    ChatBot-->>User: "Complete metformin profile with FDA data"
+```
+
+### Architecture Components
+
+**Frontend Layer:**
+- **LibreChat Interface** - ChatGPT-like web interface at `https://certus-chat.opensource.mieweb.org`
+- **Claude Desktop Integration** - Direct MCP client access for AI assistants
+
+**Integration Layer:**
+- **Stdio Wrapper** - Bridges LibreChat's stdio transport to HTTP MCP protocol
+- **Transport Compatibility** - Handles protocol translation between different MCP transports
+
+**Backend Layer:**
+- **Certus MCP Server** - Express.js server implementing MCP 2024-11-05 protocol
+- **OpenFDA Client** - Intelligent API client with multiple search strategies
+- **FDA Data Sources** - Drug Shortages, Labels, and Enforcement databases
+
+**Data Flow:**
+1. User queries are processed by LibreChat's AI engine
+2. Tool calls are routed through the stdio wrapper to the MCP server
+3. MCP server executes FDA API calls with intelligent fallback strategies
+4. Raw FDA data is returned with minimal processing for accuracy
+5. AI analyzes and presents medical information in user-friendly format
+
 ## Key Features for Healthcare Professionals
 
 ### Real-Time Drug Shortage Information
