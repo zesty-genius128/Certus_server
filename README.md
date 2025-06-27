@@ -16,49 +16,49 @@ Access real-time FDA drug information through a ChatGPT-like interface. No setup
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant LibreChat
-    participant StdioWrapper
-    participant CertusMCP
-    participant OpenFDAClient
-    participant FDA
+    participant U as User
+    participant L as LibreChat
+    participant W as StdioWrapper
+    participant M as CertusMCP
+    participant C as OpenFDAClient
+    participant F as FDA_APIs
 
-    User->>LibreChat: Drug information query
-    LibreChat->>StdioWrapper: JSON-RPC request
-    StdioWrapper->>CertusMCP: HTTP POST
-    CertusMCP->>OpenFDAClient: Tool execution
+    U->>L: Query about drug information
+    L->>W: JSON-RPC request
+    W->>M: HTTP POST to MCP endpoint
+    M->>C: Execute tool function
     
-    loop Search strategies
-        OpenFDAClient->>FDA: API request
-        FDA-->>OpenFDAClient: Response
-        break when found
+    loop Search Strategies
+        C->>F: API request with strategy
+        F-->>C: API response
+        break when results found
     end
     
-    OpenFDAClient-->>CertusMCP: Raw FDA data
-    CertusMCP-->>StdioWrapper: MCP response
-    StdioWrapper-->>LibreChat: JSON result
-    LibreChat-->>User: Medical information
+    C-->>M: Raw FDA data
+    M-->>W: MCP formatted response
+    W-->>L: JSON-RPC result
+    L-->>U: Processed information
 
-    Note over User,FDA: Complex queries use parallel calls
+    Note over U,F: Complex queries use parallel calls
     
-    User->>LibreChat: Comprehensive profile request
-    LibreChat->>StdioWrapper: Multiple tools
+    U->>L: Request comprehensive profile
+    L->>W: Multiple tool requests
     
     par
-        StdioWrapper->>CertusMCP: Label data request
-        CertusMCP->>OpenFDAClient: Label API
-        OpenFDAClient->>FDA: Labels endpoint
+        W->>M: Get label data
+        M->>C: Label API call
+        C->>F: Drug labels endpoint
     and
-        StdioWrapper->>CertusMCP: Shortage data request
-        CertusMCP->>OpenFDAClient: Shortage API
-        OpenFDAClient->>FDA: Shortages endpoint
+        W->>M: Get shortage data
+        M->>C: Shortage API call
+        C->>F: Drug shortages endpoint
     end
     
-    FDA-->>OpenFDAClient: Combined data
-    OpenFDAClient-->>CertusMCP: Merged results
-    CertusMCP-->>StdioWrapper: Complete profile
-    StdioWrapper-->>LibreChat: Full dataset
-    LibreChat-->>User: Analysis results
+    F-->>C: Combined responses
+    C-->>M: Merged data
+    M-->>W: Complete profile
+    W-->>L: Full dataset
+    L-->>U: Comprehensive analysis
 ```
 
 ### Architecture Components
