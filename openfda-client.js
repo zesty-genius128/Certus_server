@@ -9,6 +9,22 @@ const ENDPOINTS = {
 };
 
 /**
+ * Normalize identifier type to ensure openFDA compatibility
+ * This fixes the LibreChat identifier mismatch issue
+ */
+function normalizeIdentifierType(identifierType) {
+    const typeMapping = {
+        'generic_name': 'openfda.generic_name',
+        'brand_name': 'openfda.brand_name',
+        'proprietary_name': 'openfda.brand_name',
+        'openfda.generic_name': 'openfda.generic_name',
+        'openfda.brand_name': 'openfda.brand_name'
+    };
+    
+    return typeMapping[identifierType] || 'openfda.generic_name';
+}
+
+/**
  * Build query parameters for openFDA API
  */
 function buildParams(search, limit = 10, additionalParams = {}) {
@@ -122,7 +138,10 @@ export async function searchDrugShortages(drugName, limit = 10) {
  * Returns raw openFDA label data
  */
 export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openfda.generic_name") {
-    const search = `${identifierType}:"${drugIdentifier}"`;
+    // Normalize the identifier type to fix LibreChat compatibility
+    const normalizedType = normalizeIdentifierType(identifierType);
+    
+    const search = `${normalizedType}:"${drugIdentifier}"`;
     const params = buildParams(search, 1);
     
     const data = await makeRequest(ENDPOINTS.DRUG_LABEL, params);
@@ -130,7 +149,8 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
     if (data.error) {
         return {
             search_term: drugIdentifier,
-            identifier_type: identifierType,
+            identifier_type: normalizedType,
+            original_identifier_type: identifierType, // Keep original for debugging
             error: data.error,
             timestamp: new Date().toISOString(),
             api_endpoint: ENDPOINTS.DRUG_LABEL
@@ -139,7 +159,8 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
 
     return {
         search_term: drugIdentifier,
-        identifier_type: identifierType,
+        identifier_type: normalizedType,
+        original_identifier_type: identifierType, // Keep original for debugging
         data_source: "FDA Drug Label Database",
         timestamp: new Date().toISOString(),
         api_endpoint: ENDPOINTS.DRUG_LABEL,
@@ -281,17 +302,21 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
  * Combines label and shortage data with minimal processing
  */
 export async function getMedicationProfile(drugIdentifier, identifierType = "openfda.generic_name") {
+    // Normalize the identifier type to fix LibreChat compatibility
+    const normalizedType = normalizeIdentifierType(identifierType);
+    
     const profile = {
         search_info: {
             drug_identifier: drugIdentifier,
-            identifier_type: identifierType,
+            identifier_type: normalizedType,
+            original_identifier_type: identifierType, // Keep original for debugging
             timestamp: new Date().toISOString()
         }
     };
 
     try {
-        // Get label information
-        profile.label_data = await fetchDrugLabelInfo(drugIdentifier, identifierType);
+        // Get label information with normalized type
+        profile.label_data = await fetchDrugLabelInfo(drugIdentifier, normalizedType);
 
         // Determine best term for shortage search
         let shortageSearchTerm = drugIdentifier;
