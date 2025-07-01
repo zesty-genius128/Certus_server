@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import { searchDrugShortages } from './openfda-client.js';
+import { searchDrugShortages } from '../openfda-client.js';
 
 // Load environment variables
 dotenv.config();
