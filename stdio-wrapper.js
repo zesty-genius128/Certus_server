@@ -1,110 +1,96 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { 
-    CallToolRequestSchema,
-    ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import { searchDrugShortages } from './openfda-client.js';
-
-// Create the MCP server for stdio (MCP Inspector compatible)
-const server = new Server(
-    {
-        name: "drug-shortage-mcp-server",
-        version: "1.0.0",
-    },
-    {
-        capabilities: {
-            tools: {},
-        },
-    }
-);
-
-// List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-        tools: [
-            {
-                name: "search_drug_shortages",
-                description: "Search for current drug shortages using FDA data",
-                inputSchema: {
-                    type: "object",
-                    properties: {
-                        drug_name: {
-                            type: "string",
-                            description: "Name of the drug to search for shortages (generic or brand name)"
-                        },
-                        limit: {
-                            type: "integer",
-                            description: "Maximum number of results to return",
-                            default: 10,
-                            minimum: 1,
-                            maximum: 50
-                        }
-                    },
-                    required: ["drug_name"]
-                }
+/**
+ * Simple stdio wrapper for Certus MCP server
+ * This allows LibreChat/any client to use stdio transport to connect to the HTTP MCP server
+ * if the npx mcp-remote format of the config file is not working then use this stdio wrapper
+ * to then connect using the following config file format:
+ * {
+    "mcpServers": {
+            "Certus": {
+            "command": "node",
+            "args": ["path/to/your/stdio-wrapper.js"]
             }
-        ]
-    };
-});
-
-// Handle tool calls
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-
-    try {
-        switch (name) {
-            case "search_drug_shortages": {
-                const { drug_name, limit = 10 } = args;
-                
-                if (!drug_name || typeof drug_name !== 'string') {
-                    throw new Error("drug_name is required and must be a string");
-                }
-
-                console.error(`[STDIO] Searching for drug shortages: "${drug_name}"`);
-                const result = await searchDrugShortages(drug_name, limit);
-                
-                return {
-                    content: [
-                        {
-                            type: "text",
-                            text: JSON.stringify(result, null, 2)
-                        }
-                    ]
-                };
-            }
-
-            default:
-                throw new Error(`Unknown tool: ${name}`);
         }
-    } catch (error) {
-        console.error(`[STDIO] Tool execution error:`, error);
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: JSON.stringify({
-                        error: error.message,
-                        tool: name,
-                        timestamp: new Date().toISOString()
-                    }, null, 2)
-                }
-            ],
-            isError: true
-        };
     }
-});
+ */
 
-// Start the stdio server
-async function main() {
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-    console.error("[STDIO] Drug Shortage MCP Server running on stdio");
+process.stdin.setEncoding('utf8');
+process.stdout.setEncoding('utf8');
+
+const CERTUS_URL = 'https://certus.opensource.mieweb.org/mcp';
+
+async function callCertusAPI(method, params = {}) {
+  try {
+    const response = await fetch(CERTUS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Math.random().toString(36),
+        method,
+        params
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(`Certus API error: ${error.message}`);
+  }
 }
 
-main().catch((error) => {
-    console.error("[STDIO] Fatal error:", error);
-    process.exit(1);
+// Handle stdin messages
+process.stdin.on('data', async (data) => {
+  try {
+    const lines = data.trim().split('\n');
+    
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      
+      const request = JSON.parse(line);
+      let response = {
+        jsonrpc: "2.0",
+        id: request.id
+      };
+
+      try {
+        // Forward request to Certus server
+        const certusResponse = await callCertusAPI(request.method, request.params);
+        
+        if (certusResponse.error) {
+          response.error = certusResponse.error;
+        } else {
+          response.result = certusResponse.result;
+        }
+      } catch (error) {
+        response.error = {
+          code: -32603,
+          message: error.message
+        };
+      }
+
+      // Send response back via stdout
+      process.stdout.write(JSON.stringify(response) + '\n');
+    }
+  } catch (error) {
+    console.error('Parse error:', error);
+    const errorResponse = {
+      jsonrpc: "2.0",
+      id: null,
+      error: {
+        code: -32700,
+        message: "Parse error"
+      }
+    };
+    process.stdout.write(JSON.stringify(errorResponse) + '\n');
+  }
 });
+
+// Keep the process alive
+process.stdin.resume();
