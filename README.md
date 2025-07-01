@@ -97,54 +97,6 @@ Visit <https://certus-chat.opensource.mieweb.org> and ask questions like:
 - "Check shortage status for multiple diabetes medications"
 - "Batch analysis of cardiovascular drugs with trend data"
 
-## System Architecture
-
-### Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant LibreChat
-    participant StdioWrapper
-    participant CertusMCP
-    participant FDAAPIs
-
-    User->>LibreChat: Ask about drug information
-    LibreChat->>StdioWrapper: JSON-RPC request
-    StdioWrapper->>CertusMCP: HTTP POST /mcp
-    CertusMCP->>FDAAPIs: Search with multiple strategies
-    FDAAPIs-->>CertusMCP: Raw FDA data
-    CertusMCP-->>StdioWrapper: MCP response
-    StdioWrapper-->>LibreChat: JSON-RPC result
-    LibreChat-->>User: Medical information
-```
-
-### Architecture Components
-
-**Frontend Layer:**
-
-- **LibreChat Interface** - ChatGPT-like web interface at <https://certus-chat.opensource.mieweb.org>
-- **Claude Desktop Integration** - Direct MCP client access for AI assistants
-
-**Integration Layer:**
-
-- **Stdio Wrapper** - Bridges LibreChat's stdio transport to HTTP MCP protocol
-- **Transport Compatibility** - Handles protocol translation between different MCP transports
-
-**Backend Layer:**
-
-- **Certus MCP Server** - Express.js server implementing MCP 2024-11-05 protocol
-- **OpenFDA Client** - Intelligent API client with multiple search strategies
-- **FDA Data Sources** - Drug Shortages, Labels, and Enforcement databases
-
-**Data Flow:**
-
-1. User queries are processed by LibreChat's AI engine
-2. Tool calls are routed through the stdio wrapper to the MCP server
-3. MCP server executes FDA API calls with intelligent fallback strategies
-4. Raw FDA data is returned with minimal processing for accuracy
-5. AI analyzes and presents medical information in user-friendly format
-
 ## Integration Options for Healthcare Systems
 
 ### Web-Based Chatbot Interface
@@ -260,6 +212,54 @@ In Claude Desktop, try asking:
 - "Search for drug recalls involving acetaminophen"
 - "Analyze shortage trends for lisinopril"
 - "Show me FDA label information for atorvastatin"
+
+## System Architecture
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant LibreChat
+    participant StdioWrapper
+    participant CertusMCP
+    participant FDAAPIs
+
+    User->>LibreChat: Ask about drug information
+    LibreChat->>StdioWrapper: JSON-RPC request
+    StdioWrapper->>CertusMCP: HTTP POST /mcp
+    CertusMCP->>FDAAPIs: Search with multiple strategies
+    FDAAPIs-->>CertusMCP: Raw FDA data
+    CertusMCP-->>StdioWrapper: MCP response
+    StdioWrapper-->>LibreChat: JSON-RPC result
+    LibreChat-->>User: Medical information
+```
+
+### Architecture Components
+
+**Frontend Layer:**
+
+- **LibreChat Interface** - ChatGPT-like web interface at <https://certus-chat.opensource.mieweb.org>
+- **Claude Desktop Integration** - Direct MCP client access for AI assistants
+
+**Integration Layer:**
+
+- **Stdio Wrapper** - Bridges LibreChat's stdio transport to HTTP MCP protocol
+- **Transport Compatibility** - Handles protocol translation between different MCP transports
+
+**Backend Layer:**
+
+- **Certus MCP Server** - Express.js server implementing MCP 2024-11-05 protocol
+- **OpenFDA Client** - Intelligent API client with multiple search strategies
+- **FDA Data Sources** - Drug Shortages, Labels, and Enforcement databases
+
+**Data Flow:**
+
+1. User queries are processed by LibreChat's AI engine
+2. Tool calls are routed through the stdio wrapper to the MCP server
+3. MCP server executes FDA API calls with intelligent fallback strategies
+4. Raw FDA data is returned with minimal processing for accuracy
+5. AI analyzes and presents medical information in user-friendly format
 
 ## Available Tools
 
