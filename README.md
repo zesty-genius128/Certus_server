@@ -173,15 +173,33 @@ Use REST API endpoints for custom healthcare applications:
 - Health monitoring via `/health` endpoint
 - Real-time data integration with existing systems
 
-## Quick Start - Add to Claude Desktop
+## Universal MCP Client Compatibility
 
-### Step 1: Add to Claude Desktop Config
+### Why Certus Works Everywhere
 
-Add this configuration to your Claude Desktop config file:
+Certus uses a **universal HTTP-based architecture** with stdio transport bridges, making it compatible with **all major MCP clients** including Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf, and LibreChat.
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Key Advantages:**
 
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Universal Compatibility** - Works with any MCP client that supports stdio transport
+- **Production-Ready Hosting** - Always-on server with HTTPS, health monitoring, and scaling
+- **No Client Dependencies** - Clients don't need to manage server lifecycle or installations  
+- **Easy Debugging** - Standard HTTP endpoints for testing with curl, Postman, or browsers
+- **Simple Updates** - Server updates are deployed centrally without client-side changes
+
+## Quick Start - Add to Any MCP Client
+
+### Step 1: Universal Configuration (Recommended)
+
+This configuration works with **all MCP clients** (Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf):
+
+**Configuration file locations:**
+
+- **Claude Desktop (macOS)**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Claude Desktop (Windows)**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **VS Code**: `.vscode/mcp.json` (workspace) or global settings
+- **Cursor**: `~/.cursor/mcp.json` or `.cursor/mcp.json` (project)
+- **Visual Studio**: `<SOLUTIONDIR>\.mcp.json`
 
 ```json
 {
@@ -194,7 +212,25 @@ Add this configuration to your Claude Desktop config file:
 }
 ```
 
-> **Note:** The `--allow-http` flag is only required if you are using an `http` URL. If your server URL starts with `https`, you do not need to include this flag.
+### Step 2: Backup Option (If npx mcp-remote doesn't work)
+
+If the `npx mcp-remote` method doesn't work with your specific MCP client setup, use our stdio wrapper:
+
+1. **Download the stdio wrapper**: Get `stdio-wrapper.js` from our repository
+2. **Update your config** to point to the wrapper file:
+
+```json
+{
+  "mcpServers": {
+    "Certus": {
+      "command": "node",
+      "args": ["/path/to/your/stdio-wrapper.js"]
+    }
+  }
+}
+```
+
+> **Note:** Replace `/path/to/your/stdio-wrapper.js` with the actual path where you saved the wrapper file.
 
 #### Alternative Configuration (Backup Server)
 
@@ -211,9 +247,9 @@ If the main server is unavailable, use the Railway backup:
 }
 ```
 
-### Step 2: Restart Claude Desktop
+### Step 2: Restart the App
 
-Close and reopen Claude Desktop completely. The drug information tools should now be available.
+Close and reopen Claude Desktop/the MCP client completely. The drug information tools should now be available.
 
 ### Step 3: Test the Integration
 
