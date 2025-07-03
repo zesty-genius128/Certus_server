@@ -8,7 +8,7 @@
  * - Universal compatibility: Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf, LibreChat
  * 
  * Key Design Decisions:
- * - HTTP server (not SSE) for production reliability and debugging
+ * - HTTP server implementing MCP Streamable HTTP transport for production reliability
  * - Stdio bridges handle transport protocol differences between clients
  * - Raw FDA API responses preserved for accurate medical data
  * - No complex authentication - focuses on core FDA data access
