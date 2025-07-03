@@ -565,7 +565,6 @@ Certus_server/
 |------------|--------|------------------------------------------|
 | `/health`  | GET    | Server health check and status           |
 | `/mcp`     | POST   | MCP JSON-RPC endpoint for tool calls     |
-| `/mcp`     | GET    | MCP SSE endpoint for real-time connections |
 | `/tools`   | GET    | List all available tools and schemas     |
 | `/`        | GET    | Server information and documentation     |
 
