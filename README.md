@@ -358,7 +358,7 @@ Get FDA label information for atorvastatin and check current shortage status
 - **Host:** certus.opensource.mieweb.org
 - **Service:** OpenFDA MCP Server
 - **Tools Available:** 6 FDA drug information tools
-- **Protocol:** HTTPS with CORS enabled
+- **Protocol:** HTTPS with CORS enabled (MCP Streamable HTTP 2024-11-05)
 
 ### Backup Deployment (Railway)
 
@@ -665,7 +665,7 @@ npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
 - **Node.js:** 18+ required
 - **Dependencies:** Express, CORS, Helmet, Compression, MCP SDK
 - **Response Format:** JSON-RPC 2.0 with raw FDA data
-- **Transport:** HTTP POST (JSON-RPC), SSE (Server-Sent Events), and stdio
+- **Transport:** HTTP POST (JSON-RPC) with stdio bridge compatibility
 - **Rate Limiting:** FDA API public limits (1,000 requests/day without API key)
 - **Tools Available:** 6 FDA drug information tools
 - **CORS:** Enabled for cross-origin requests
