@@ -5,7 +5,8 @@ const BASE_URL = "https://api.fda.gov";
 const ENDPOINTS = {
     DRUG_LABEL: `${BASE_URL}/drug/label.json`,
     DRUG_SHORTAGES: `${BASE_URL}/drug/shortages.json`,
-    DRUG_ENFORCEMENT: `${BASE_URL}/drug/enforcement.json`
+    DRUG_ENFORCEMENT: `${BASE_URL}/drug/enforcement.json`,
+    DRUG_EVENT: `${BASE_URL}/drug/event.json`
 };
 
 /**
@@ -432,13 +433,153 @@ export async function getMedicationProfile(drugIdentifier, identifierType = "ope
 }
 
 /**
+ * Search for FDA adverse event reports (FAERS database)
+ * Returns raw openFDA adverse event data with minimal processing
+ */
+export async function searchAdverseEvents(drugName, limit = 10) {
+    // Enhanced input validation with helpful messages
+    if (!drugName || typeof drugName !== 'string') {
+        return {
+            error: "Please provide a medication name to search for adverse events",
+            examples: ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
+            tip: "Both generic names (atorvastatin) and brand names (Lipitor) work",
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    if (!drugName.trim()) {
+        return {
+            error: "Medication name cannot be empty for adverse event search",
+            examples: ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
+            tip: "This searches the FDA FAERS database for reported side effects",
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    const cleanName = drugName.trim();
+    
+    // Define search strategies in order of preference for adverse events
+    const searchStrategies = [
+        // Most common - drug name in medicinal product field
+        `patient.drug.medicinalproduct:"${cleanName}"`,
+        
+        // OpenFDA standardized fields
+        `patient.drug.openfda.generic_name:"${cleanName}"`,
+        `patient.drug.openfda.brand_name:"${cleanName}"`,
+        
+        // Broader search without quotes
+        `patient.drug.medicinalproduct:${cleanName}`,
+        
+        // Active substance search
+        `patient.drug.activesubstance.activesubstancename:"${cleanName}"`
+    ];
+
+    // Try each strategy until we get results
+    for (const search of searchStrategies) {
+        const params = buildParams(search, limit);
+        const data = await makeRequest(ENDPOINTS.DRUG_EVENT, params);
+        
+        if (data.error && data.status !== 404) {
+            continue; // Try next strategy on error
+        }
+        
+        if (data.results && data.results.length > 0) {
+            return {
+                search_term: drugName,
+                search_strategy: search,
+                data_source: "FDA Adverse Event Reporting System (FAERS)",
+                timestamp: new Date().toISOString(),
+                api_endpoint: ENDPOINTS.DRUG_EVENT,
+                note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
+                total_reports_available: data.meta?.results?.total || 0,
+                ...data // Spread the raw openFDA response
+            };
+        }
+    }
+
+    // Enhanced no results message
+    return {
+        search_term: drugName,
+        results: [],
+        meta: { results: { total: 0 } },
+        message: `No adverse events found in FDA database for "${drugName}"`,
+        note: "This could mean the drug is very safe, very new, or try a different name",
+        examples: ["If you searched 'Tylenol', try 'acetaminophen' or if you searched 'Advil', try 'ibuprofen'"],
+        search_strategies_tried: searchStrategies,
+        data_source: "FDA Adverse Event Reporting System (FAERS)",
+        timestamp: new Date().toISOString(),
+        api_endpoint: ENDPOINTS.DRUG_EVENT
+    };
+}
+
+/**
+ * Search for serious adverse events only
+ * Returns only adverse events that resulted in hospitalization, death, disability, etc.
+ */
+export async function searchSeriousAdverseEvents(drugName, limit = 10) {
+    // Enhanced input validation
+    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
+        return {
+            error: "Please provide a medication name to search for serious adverse events",
+            examples: ["Try: warfarin, methotrexate, digoxin, lithium"],
+            tip: "Serious events include death, hospitalization, life-threatening conditions, or disability",
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    const cleanName = drugName.trim();
+    
+    // Search for serious adverse events only (serious:1)
+    const search = `patient.drug.medicinalproduct:"${cleanName}" AND serious:1`;
+    
+    const params = buildParams(search, limit);
+    const data = await makeRequest(ENDPOINTS.DRUG_EVENT, params);
+    
+    if (data.error) {
+        return {
+            search_term: drugName,
+            error: data.error,
+            suggestion: "Try using the generic name or check the spelling",
+            examples: ["If you searched 'Coumadin', try 'warfarin'"],
+            timestamp: new Date().toISOString(),
+            api_endpoint: ENDPOINTS.DRUG_EVENT
+        };
+    }
+
+    if (data.results && data.results.length > 0) {
+        return {
+            search_term: drugName,
+            search_strategy: search,
+            data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
+            timestamp: new Date().toISOString(),
+            api_endpoint: ENDPOINTS.DRUG_EVENT,
+            warning: "These are serious adverse events that resulted in hospitalization, death, or disability",
+            total_serious_reports: data.meta?.results?.total || 0,
+            ...data
+        };
+    } else {
+        return {
+            search_term: drugName,
+            results: [],
+            meta: { results: { total: 0 } },
+            message: `No serious adverse events found for "${drugName}" - this is encouraging!`,
+            note: "The absence of serious adverse events suggests good safety profile",
+            data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
+            timestamp: new Date().toISOString(),
+            api_endpoint: ENDPOINTS.DRUG_EVENT
+        };
+    }
+}
+
+/**
  * Health check function to verify API connectivity
  */
 export async function healthCheck() {
     const testSearches = [
         { endpoint: ENDPOINTS.DRUG_LABEL, params: buildParams('openfda.generic_name:"aspirin"', 1) },
         { endpoint: ENDPOINTS.DRUG_SHORTAGES, params: buildParams('"test"', 1) },
-        { endpoint: ENDPOINTS.DRUG_ENFORCEMENT, params: buildParams('product_description:"test"', 1) }
+        { endpoint: ENDPOINTS.DRUG_ENFORCEMENT, params: buildParams('product_description:"test"', 1) },
+        { endpoint: ENDPOINTS.DRUG_EVENT, params: buildParams('patient.drug.medicinalproduct:"aspirin"', 1) }
     ];
 
     const results = {};
