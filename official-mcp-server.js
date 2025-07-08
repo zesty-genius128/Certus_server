@@ -30,6 +30,8 @@ import {
     analyzeDrugMarketTrends,
     batchDrugAnalysis,
     getMedicationProfile,
+    searchAdverseEvents,        // ADD THIS
+    searchSeriousAdverseEvents, // ADD THIS
     healthCheck
 } from './openfda-client.js';
 
@@ -176,6 +178,48 @@ const TOOL_DEFINITIONS = [
                 }
             },
             required: ["drug_list"]
+        }
+    },
+    {
+        name: "search_adverse_events",
+        description: "Search FDA adverse event reports (FAERS database) for a medication. Returns reported side effects and reactions.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Name of the drug to search for adverse events (generic or brand name)"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of adverse event reports to return",
+                    default: 10,
+                    minimum: 1,
+                    maximum: 50
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "search_serious_adverse_events",
+        description: "Search for serious adverse events only (hospitalization, death, disability) from FDA database for a medication.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Name of the drug to search for serious adverse events"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of serious adverse event reports to return",
+                    default: 10,
+                    minimum: 1,
+                    maximum: 50
+                }
+            },
+            required: ["drug_name"]
         }
     }
 ];
@@ -388,6 +432,15 @@ async function handleToolCall(name, args) {
                 }
                 log.tool(name, `${args.drug_list.length} drugs`, `trends: ${args.include_trends || false}`);
                 result = await batchDrugAnalysis(args.drug_list, args.include_trends || false);
+                break;
+            case "search_adverse_events":
+                log.tool(name, drugName, `limit: ${args.limit || 10}`);
+                result = await searchAdverseEvents(args.drug_name, args.limit || 10);
+                break;
+                
+            case "search_serious_adverse_events":
+                log.tool(name, drugName, `limit: ${args.limit || 10}`);
+                result = await searchSeriousAdverseEvents(args.drug_name, args.limit || 10);
                 break;
                 
             default:
