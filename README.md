@@ -54,6 +54,15 @@ Access real-time FDA drug information through a ChatGPT-like interface. No setup
 - Cross-referenced data from FDA drug label and shortage databases
 - Streamlined access to comprehensive FDA medication information
 
+### FDA Adverse Event Reporting (FAERS)
+
+- Search comprehensive FDA adverse event database for reported side effects and reactions
+- Filter for serious adverse events only (hospitalization, death, disability, life-threatening conditions)
+- Raw FAERS data with patient demographics, reaction terms, and safety report details
+- Both general adverse events and serious events filtering with medical disclaimers
+
+> **Note:** Adverse events queries may return large datasets. For comparative queries, use individual drug searches rather than asking to compare multiple drugs simultaneously to avoid token limits.
+
 ## How to Use the Chatbot
 
 Visit <https://certus-chat.opensource.mieweb.org> and ask questions like:
@@ -96,6 +105,13 @@ Visit <https://certus-chat.opensource.mieweb.org> and ask questions like:
 - "Analyze these drugs for shortages: insulin, metformin, lisinopril"
 - "Check shortage status for multiple diabetes medications"
 - "Batch analysis of cardiovascular drugs with trend data"
+
+**Adverse Events Queries:**
+
+- "What adverse events have been reported for aspirin?"
+- "Show me serious adverse events for warfarin"
+- "Search for side effects of metformin in the FDA database"
+- "Has the FDA received reports of serious reactions to atorvastatin?"
 
 ## Integration Options for Healthcare Systems
 
@@ -326,6 +342,28 @@ Analyze drug shortage patterns using historical FDA shortage data.
 
 Simultaneously analyze multiple drugs for shortages, recalls, and optionally trends.
 
+#### `search_adverse_events`
+
+Search the FDA adverse event reporting system (FAERS) for reported side effects and reactions.
+
+**Parameters:**
+
+- `drug_name` (string, required): Name of the drug to search for adverse events
+- `limit` (integer, optional): Maximum adverse event reports to return (1-50, default: 10)
+
+**Returns:** Raw FDA FAERS data including patient demographics, reaction terms, seriousness indicators, and safety report details.
+
+#### `search_serious_adverse_events`
+
+Search for serious adverse events only (hospitalization, death, disability, life-threatening conditions).
+
+**Parameters:**
+
+- `drug_name` (string, required): Name of the drug to search for serious adverse events
+- `limit` (integer, optional): Maximum serious adverse event reports to return (1-50, default: 10)
+
+**Returns:** Raw FDA FAERS data filtered for serious outcomes with safety warnings and report classifications.
+
 **Parameters:**
 
 - `drug_list` (array, required): List of drug names (max 25 drugs)
@@ -347,6 +385,12 @@ Analyze shortage patterns for lisinopril using historical FDA data from the past
 Perform batch analysis on these drugs: insulin, metformin, lisinopril, aspirin - include trend data
 
 Get FDA label information for atorvastatin and check current shortage status
+
+Search for adverse events reported to FDA for aspirin
+
+Show me only serious adverse events for warfarin that resulted in hospitalization or death
+
+Get FDA adverse event data for metformin and check for any lactic acidosis reports
 ```
 
 ## Server Infrastructure
@@ -357,7 +401,7 @@ Get FDA label information for atorvastatin and check current shortage status
 - **Status Check:** <https://certus.opensource.mieweb.org/health>
 - **Host:** certus.opensource.mieweb.org
 - **Service:** OpenFDA MCP Server
-- **Tools Available:** 6 FDA drug information tools
+- **Tools Available:** 8 FDA drug information tools
 - **Protocol:** HTTPS with CORS enabled (MCP Streamable HTTP 2024-11-05)
 
 ### Backup Deployment (Railway)
@@ -568,6 +612,27 @@ Certus_server/
 | `/tools`   | GET    | List all available tools and schemas     |
 | `/`        | GET    | Server information and documentation     |
 
+## OpenFDA API Endpoints Used
+
+Certus integrates with the following official FDA openFDA API endpoints to provide comprehensive drug information:
+
+| OpenFDA Endpoint | Purpose | Description | Data Source |
+|------------------|---------|-------------|-------------|
+| `/drug/label.json` | Drug Labeling | FDA-approved prescribing information, structured product labeling, dosage forms, indications, contraindications, and warnings | FDA National Drug Code Directory |
+| `/drug/shortages.json` | Drug Shortages | Current and resolved drug shortage information including reasons, estimated resolution dates, and manufacturer contact details | FDA Drug Shortage Database |
+| `/drug/enforcement.json` | Drug Recalls | Drug recall and enforcement actions including recall classifications, affected products, and distribution information | FDA Enforcement Reports Database |
+| `/drug/event.json` | Adverse Events | Adverse event reports submitted to FDA including patient demographics, reactions, seriousness indicators, and safety data | FDA Adverse Event Reporting System (FAERS) |
+
+**Base URL:** `https://api.fda.gov`
+
+**Authentication:** Optional API key for higher rate limits (1,000 requests/day without key, 120,000 requests/day with key)
+
+**Rate Limiting:** Automatically managed by Certus server with intelligent request strategies
+
+**Data Format:** All endpoints return raw FDA JSON data with minimal processing to preserve accuracy
+
+> **Official Documentation:** [FDA openFDA APIs](https://open.fda.gov/apis/)
+
 ## Advanced Features
 
 ### Intelligent Drug Matching
@@ -582,6 +647,7 @@ Certus_server/
 - **FDA Drug Shortages Database:** Real-time shortage information with reasons and estimated resolution
 - **FDA Drug Labels Database:** Complete structured product labeling and prescribing information
 - **FDA Enforcement Database:** Drug recall and safety information with classification details
+- **FDA Adverse Event Reporting System (FAERS):** Comprehensive adverse event and safety data with reaction classifications
 
 ### Minimal Processing Architecture
 
@@ -660,14 +726,14 @@ npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
 ## Technical Specifications
 
 - **Protocol:** Model Context Protocol (MCP) 2024-11-05
-- **Data Sources:** FDA openFDA APIs (Drug Shortages, Labels, Enforcement)
+- **Data Sources:** FDA openFDA APIs (Drug Shortages, Labels, Enforcement, Adverse Events)
 - **Server:** OpenFDA MCP Server v2.0.0
 - **Node.js:** 18+ required
 - **Dependencies:** Express, CORS, Helmet, Compression, MCP SDK
 - **Response Format:** JSON-RPC 2.0 with raw FDA data
 - **Transport:** HTTP POST (JSON-RPC) with stdio bridge compatibility
 - **Rate Limiting:** FDA API public limits (1,000 requests/day without API key)
-- **Tools Available:** 6 FDA drug information tools
+- **Tools Available:** 8 FDA drug information tools
 - **CORS:** Enabled for cross-origin requests
 
 ## Resources
@@ -688,4 +754,4 @@ MIT License
 **Backup Server:** <https://certus-server-production.up.railway.app/mcp>  
 **Status:** Production Ready  
 **Protocol:** MCP 2024-11-05  
-**Data Sources:** FDA Drug Shortages, Labels, and Enforcement Databases
+**Data Sources:** FDA Drug Shortages, Labels, Enforcement, and Adverse Events (FAERS) Databases
