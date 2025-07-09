@@ -180,9 +180,9 @@ const TOOL_DEFINITIONS = [
             required: ["drug_list"]
         }
     },
-    {
+     {
         name: "search_adverse_events",
-        description: "Search FDA adverse event reports (FAERS database) for a medication. Returns reported side effects and reactions.",
+        description: "Search FDA adverse event reports (FAERS database) for a medication. Returns summarized data by default, full raw data when detailed=true.",
         inputSchema: {
             type: "object",
             properties: {
@@ -193,17 +193,22 @@ const TOOL_DEFINITIONS = [
                 limit: {
                     type: "integer",
                     description: "Maximum number of adverse event reports to return",
-                    default: 10,
+                    default: 5,
                     minimum: 1,
                     maximum: 50
+                },
+                detailed: {
+                    type: "boolean",
+                    description: "Return full raw FDA data (true) or summarized data (false). Default false for better performance.",
+                    default: false
                 }
             },
             required: ["drug_name"]
         }
     },
-    {
+   {
         name: "search_serious_adverse_events",
-        description: "Search for serious adverse events only (hospitalization, death, disability) from FDA database for a medication.",
+        description: "Search for serious adverse events only (hospitalization, death, disability). Returns summarized data by default, full raw data when detailed=true.",
         inputSchema: {
             type: "object",
             properties: {
@@ -214,9 +219,14 @@ const TOOL_DEFINITIONS = [
                 limit: {
                     type: "integer",
                     description: "Maximum number of serious adverse event reports to return",
-                    default: 10,
+                    default: 5,
                     minimum: 1,
                     maximum: 50
+                },
+                detailed: {
+                    type: "boolean",
+                    description: "Return full raw FDA data (true) or summarized data (false). Default false for better performance.",
+                    default: false
                 }
             },
             required: ["drug_name"]
@@ -434,13 +444,13 @@ async function handleToolCall(name, args) {
                 result = await batchDrugAnalysis(args.drug_list, args.include_trends || false);
                 break;
             case "search_adverse_events":
-                log.tool(name, drugName, `limit: ${args.limit || 10}`);
-                result = await searchAdverseEvents(args.drug_name, args.limit || 10);
+                log.tool(name, drugName, `limit: ${args.limit || 5}, detailed: ${args.detailed || false}`);
+                result = await searchAdverseEvents(args.drug_name, args.limit || 5, args.detailed || false);
                 break;
                 
             case "search_serious_adverse_events":
-                log.tool(name, drugName, `limit: ${args.limit || 10}`);
-                result = await searchSeriousAdverseEvents(args.drug_name, args.limit || 10);
+                log.tool(name, drugName, `limit: ${args.limit || 5}, detailed: ${args.detailed || false}`);
+                result = await searchSeriousAdverseEvents(args.drug_name, args.limit || 5, args.detailed || false);
                 break;
                 
             default:
