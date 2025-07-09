@@ -58,7 +58,7 @@ const log = {
 const TOOL_DEFINITIONS = [
     {
         name: "search_drug_shortages",
-        description: "Search for current drug shortages using FDA data. Returns raw OpenFDA data with minimal processing.",
+        description: "Search current FDA drug shortages. Use when asked about drug availability, shortages, supply issues, or 'is [drug] in shortage'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -78,111 +78,8 @@ const TOOL_DEFINITIONS = [
         }
     },
     {
-        name: "get_medication_profile",
-        description: "Get complete drug information combining label and shortage data. Returns raw API responses.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                drug_identifier: {
-                    type: "string",
-                    description: "The drug identifier to search for"
-                },
-                identifier_type: {
-                    type: "string",
-                    description: "The type of identifier",
-                    default: "openfda.generic_name",
-                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
-                }
-            },
-            required: ["drug_identifier"]
-        }
-    },
-    {
-        name: "search_drug_recalls",
-        description: "Search for drug recalls using FDA enforcement database. Returns raw enforcement data.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                drug_name: {
-                    type: "string",
-                    description: "Drug name to search for recalls"
-                },
-                limit: {
-                    type: "integer",
-                    description: "Maximum number of results",
-                    default: 10,
-                    minimum: 1,
-                    maximum: 50
-                }
-            },
-            required: ["drug_name"]
-        }
-    },
-    {
-        name: "get_drug_label_info",
-        description: "Get FDA label information for a drug. Returns raw structured product labeling data.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                drug_identifier: {
-                    type: "string",
-                    description: "The drug identifier to search for"
-                },
-                identifier_type: {
-                    type: "string",
-                    description: "The type of identifier",
-                    default: "openfda.generic_name",
-                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
-                }
-            },
-            required: ["drug_identifier"]
-        }
-    },
-    {
-        name: "analyze_drug_market_trends",
-        description: "Analyze drug shortage patterns. Returns raw shortage data for trend analysis.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                drug_name: {
-                    type: "string",
-                    description: "Drug name to analyze"
-                },
-                months_back: {
-                    type: "integer",
-                    description: "Number of months to look back",
-                    default: 12,
-                    minimum: 1,
-                    maximum: 60
-                }
-            },
-            required: ["drug_name"]
-        }
-    },
-    {
-        name: "batch_drug_analysis",
-        description: "Analyze multiple drugs simultaneously. Returns array of raw API responses.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                drug_list: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "List of drug names to analyze",
-                    maxItems: 25
-                },
-                include_trends: {
-                    type: "boolean",
-                    description: "Whether to include trend analysis",
-                    default: false
-                }
-            },
-            required: ["drug_list"]
-        }
-    },
-     {
         name: "search_adverse_events",
-        description: "Search FDA adverse event reports (FAERS database) for a medication. Returns summarized data by default, full raw data when detailed=true.",
+        description: "Search FDA adverse events and side effects. Use when asked about 'side effects', 'adverse events', 'reactions', 'safety concerns', or 'what are the side effects of [drug]'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -206,9 +103,9 @@ const TOOL_DEFINITIONS = [
             required: ["drug_name"]
         }
     },
-   {
+    {
         name: "search_serious_adverse_events",
-        description: "Search for serious adverse events only (hospitalization, death, disability). Returns summarized data by default, full raw data when detailed=true.",
+        description: "Search serious adverse events only (death, hospitalization, disability). Use when asked about 'serious side effects', 'dangerous reactions', 'fatal events', or 'hospitalizations from [drug]'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -230,6 +127,109 @@ const TOOL_DEFINITIONS = [
                 }
             },
             required: ["drug_name"]
+        }
+    },
+    {
+        name: "search_drug_recalls",
+        description: "Search FDA drug recalls and safety alerts. Use when asked about 'recalls', 'safety alerts', 'withdrawn drugs', or 'has [drug] been recalled'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Drug name to search for recalls"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of results",
+                    default: 10,
+                    minimum: 1,
+                    maximum: 50
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "get_drug_label_info",
+        description: "Get FDA prescribing information and drug labeling. Use when asked about 'prescribing info', 'FDA label', 'dosage forms', 'indications', or 'how is [drug] prescribed'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_identifier: {
+                    type: "string",
+                    description: "The drug identifier to search for"
+                },
+                identifier_type: {
+                    type: "string",
+                    description: "The type of identifier",
+                    default: "openfda.generic_name",
+                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
+                }
+            },
+            required: ["drug_identifier"]
+        }
+    },
+    {
+        name: "get_medication_profile",
+        description: "Get combined medication overview (label + shortage status only). Use when asked for 'complete information', 'full profile', or 'everything about [drug]' but NOT for side effects or adverse events.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_identifier: {
+                    type: "string",
+                    description: "The drug identifier to search for"
+                },
+                identifier_type: {
+                    type: "string",
+                    description: "The type of identifier",
+                    default: "openfda.generic_name",
+                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
+                }
+            },
+            required: ["drug_identifier"]
+        }
+    },
+    {
+        name: "analyze_drug_market_trends",
+        description: "Analyze drug shortage patterns over time. Use when asked about 'shortage trends', 'historical patterns', 'shortage analysis over time', or 'trends for [drug]'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Drug name to analyze"
+                },
+                months_back: {
+                    type: "integer",
+                    description: "Number of months to look back",
+                    default: 12,
+                    minimum: 1,
+                    maximum: 60
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "batch_drug_analysis",
+        description: "Analyze multiple drugs simultaneously. Use when asked to 'compare multiple drugs', 'analyze this list of drugs', or given a list of 2+ medications to analyze.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_list: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of drug names to analyze",
+                    maxItems: 25
+                },
+                include_trends: {
+                    type: "boolean",
+                    description: "Whether to include trend analysis",
+                    default: false
+                }
+            },
+            required: ["drug_list"]
         }
     }
 ];
