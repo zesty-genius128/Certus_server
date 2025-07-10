@@ -338,10 +338,6 @@ Analyze drug shortage patterns using historical FDA shortage data.
 
 **Returns:** Raw FDA shortage records for the specified time period with minimal processing for custom trend analysis.
 
-#### `batch_drug_analysis`
-
-Simultaneously analyze multiple drugs for shortages, recalls, and optionally trends.
-
 #### `search_adverse_events`
 
 Search the FDA adverse event reporting system (FAERS) for reported side effects and reactions.
@@ -349,7 +345,8 @@ Search the FDA adverse event reporting system (FAERS) for reported side effects 
 **Parameters:**
 
 - `drug_name` (string, required): Name of the drug to search for adverse events
-- `limit` (integer, optional): Maximum adverse event reports to return (1-50, default: 10)
+- `limit` (integer, optional): Maximum adverse event reports to return (1-50, default: 5)
+- `detailed` (boolean, optional): Return full raw FDA data (true) or summarized data (false). Default false for better performance.
 
 **Returns:** Raw FDA FAERS data including patient demographics, reaction terms, seriousness indicators, and safety report details.
 
@@ -360,9 +357,14 @@ Search for serious adverse events only (hospitalization, death, disability, life
 **Parameters:**
 
 - `drug_name` (string, required): Name of the drug to search for serious adverse events
-- `limit` (integer, optional): Maximum serious adverse event reports to return (1-50, default: 10)
+- `limit` (integer, optional): Maximum serious adverse event reports to return (1-50, default: 5)
+- `detailed` (boolean, optional): Return full raw FDA data (true) or summarized data (false). Default false for better performance.
 
 **Returns:** Raw FDA FAERS data filtered for serious outcomes with safety warnings and report classifications.
+
+#### `batch_drug_analysis`
+
+Simultaneously analyze multiple drugs for shortages, recalls, and optionally trends.
 
 **Parameters:**
 
