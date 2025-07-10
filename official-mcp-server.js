@@ -30,8 +30,8 @@ import {
     analyzeDrugMarketTrends,
     batchDrugAnalysis,
     getMedicationProfile,
-    searchAdverseEvents,        // ADD THIS
-    searchSeriousAdverseEvents, // ADD THIS
+    searchAdverseEvents,
+    searchSeriousAdverseEvents,
     healthCheck
 } from './openfda-client.js';
 
@@ -52,7 +52,7 @@ const log = {
 };
 
 /**
- * Tool definitions - single source of truth for all 6 FDA drug information tools
+ * Tool definitions - single source of truth for all 8 FDA drug information tools
  * Used by /tools endpoint, MCP tools/list, and documentation
  */
 const TOOL_DEFINITIONS = [
@@ -473,113 +473,6 @@ async function handleToolCall(name, args) {
     }
 }
 
-/**
- * Direct tool testing endpoints for debugging and development
- * These endpoints bypass MCP protocol for direct API testing
- */
-
-/**
- * Search drug shortages directly via HTTP
- * @route POST /tools/search_drug_shortages
- */
-app.post('/tools/search_drug_shortages', async (req, res) => {
-    try {
-        const { drug_name, limit = 10 } = req.body;
-        if (!drug_name) {
-            return res.status(400).json({ error: "drug_name is required" });
-        }
-        
-        log.tool('search_drug_shortages', drug_name, `direct HTTP call, limit: ${limit}`);
-        const result = await searchDrugShortages(drug_name, limit);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `search_drug_shortages HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Get medication profile directly via HTTP
- * @route POST /tools/get_medication_profile
- */
-app.post('/tools/get_medication_profile', async (req, res) => {
-    try {
-        const { drug_identifier, identifier_type = "openfda.generic_name" } = req.body;
-        if (!drug_identifier) {
-            return res.status(400).json({ error: "drug_identifier is required" });
-        }
-        
-        log.tool('get_medication_profile', drug_identifier, `direct HTTP call, type: ${identifier_type}`);
-        const result = await getMedicationProfile(drug_identifier, identifier_type);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `get_medication_profile HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Search drug recalls directly via HTTP
- * @route POST /tools/search_drug_recalls
- */
-app.post('/tools/search_drug_recalls', async (req, res) => {
-    try {
-        const { drug_name, limit = 10 } = req.body;
-        if (!drug_name) {
-            return res.status(400).json({ error: "drug_name is required" });
-        }
-        
-        log.tool('search_drug_recalls', drug_name, `direct HTTP call, limit: ${limit}`);
-        const result = await searchDrugRecalls(drug_name, limit);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `search_drug_recalls HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Analyze drug market trends directly via HTTP
- * @route POST /tools/analyze_drug_market_trends
- */
-app.post('/tools/analyze_drug_market_trends', async (req, res) => {
-    try {
-        const { drug_name, months_back = 12 } = req.body;
-        if (!drug_name) {
-            return res.status(400).json({ error: "drug_name is required" });
-        }
-        
-        log.tool('analyze_drug_market_trends', drug_name, `direct HTTP call, months: ${months_back}`);
-        const result = await analyzeDrugMarketTrends(drug_name, months_back);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `analyze_drug_market_trends HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Batch drug analysis directly via HTTP
- * @route POST /tools/batch_drug_analysis
- */
-app.post('/tools/batch_drug_analysis', async (req, res) => {
-    try {
-        const { drug_list, include_trends = false } = req.body;
-        if (!drug_list || !Array.isArray(drug_list)) {
-            return res.status(400).json({ error: "drug_list is required and must be an array" });
-        }
-        if (drug_list.length > 25) {
-            return res.status(400).json({ error: "Maximum 25 drugs per batch" });
-        }
-        
-        log.tool('batch_drug_analysis', `${drug_list.length} drugs`, `direct HTTP call, trends: ${include_trends}`);
-        const result = await batchDrugAnalysis(drug_list, include_trends);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `batch_drug_analysis HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
 
 /**
  * Global error handling middleware
