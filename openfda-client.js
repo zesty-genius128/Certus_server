@@ -51,7 +51,7 @@ async function makeRequest(url, params) {
             timeout: 15000,
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'OpenFDA-MCP-Client/1.0'
+                'User-Agent': 'OpenFDA-MCP-Client/2.0'
             }
         });
 
@@ -435,6 +435,11 @@ export async function getMedicationProfile(drugIdentifier, identifierType = "ope
 /**
  * Search for FDA adverse event reports (FAERS database) with hybrid response
  * Returns summarized data by default, full raw data when detailed=true
+ * 
+ * @param {string} drugName - Name of the drug to search for adverse events
+ * @param {number} [limit=5] - Maximum number of reports to return (1-50)
+ * @param {boolean} [detailed=false] - Return full raw FDA data or summary
+ * @returns {Promise<Object>} FDA FAERS data with adverse event reports
  */
 export async function searchAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation with helpful messages
@@ -517,8 +522,13 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
 }
 
 /**
- * Search for serious adverse events only with hybrid response
+ * Search for serious adverse events only (death, hospitalization, disability) with hybrid response
  * Returns summarized data by default, full raw data when detailed=true
+ * 
+ * @param {string} drugName - Name of the drug to search for serious adverse events
+ * @param {number} [limit=5] - Maximum number of serious adverse event reports to return (1-50)
+ * @param {boolean} [detailed=false] - Return full raw FDA data or summary
+ * @returns {Promise<Object>} FDA FAERS data with serious adverse events only
  */
 export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation
@@ -587,7 +597,11 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
 }
 
 /**
- * Generate summary for general adverse events
+ * Generate summary for general adverse events from FDA FAERS data
+ * 
+ * @param {Object} data - Raw FDA FAERS API response data
+ * @param {string} drugName - Name of the drug being analyzed
+ * @returns {Object} Summarized adverse event data with top reactions and key insights
  */
 function generateAdverseEventSummary(data, drugName) {
     const totalReports = data.meta?.results?.total || 0;
@@ -653,7 +667,11 @@ function generateAdverseEventSummary(data, drugName) {
 }
 
 /**
- * Generate summary for serious adverse events
+ * Generate summary for serious adverse events from FDA FAERS data
+ * 
+ * @param {Object} data - Raw FDA FAERS API response data for serious events only
+ * @param {string} drugName - Name of the drug being analyzed
+ * @returns {Object} Summarized serious adverse event data with event types and safety alerts
  */
 function generateSeriousEventSummary(data, drugName) {
     const totalReports = data.meta?.results?.total || 0;
@@ -720,7 +738,11 @@ function generateSeriousEventSummary(data, drugName) {
 }
 
 /**
- * Generate key insights for general adverse events
+ * Generate key insights for general adverse events based on reaction patterns
+ * 
+ * @param {Array} topReactions - Array of top reported reactions with counts
+ * @param {number} seriousPercentage - Percentage of serious events in the sample
+ * @returns {Array<string>} Array of insight strings for user guidance
  */
 function generateKeyInsights(topReactions, seriousPercentage) {
     const insights = [];
@@ -741,7 +763,11 @@ function generateKeyInsights(topReactions, seriousPercentage) {
 }
 
 /**
- * Generate safety alert for serious events
+ * Generate safety alert for serious events based on event types and reactions
+ * 
+ * @param {Object} seriousTypes - Object containing counts of different serious event types
+ * @param {Array} topReactions - Array of top reported reactions in serious events
+ * @returns {Array<string>} Array of safety alert strings for medical awareness
  */
 function generateSafetyAlert(seriousTypes, topReactions) {
     const alerts = [];
