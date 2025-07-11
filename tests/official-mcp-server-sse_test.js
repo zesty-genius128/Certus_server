@@ -13,7 +13,7 @@ import {
     batchDrugAnalysis,
     getMedicationProfile,
     healthCheck
-} from './openfda-client.js';
+} from '../openfda-client.js';
 
 dotenv.config();
 
