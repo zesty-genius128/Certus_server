@@ -352,7 +352,7 @@ app.post('/mcp', async (req, res) => {
                     protocolVersion: "2024-11-05",
                     capabilities: { tools: {} },
                     serverInfo: {
-                        name: "openfda-drug-information-mcp-server",
+                        name: "OpenFDA Drug Information MCP Server",
                         version: "2.0.0",
                         description: "FDA drug information with shortages, recalls, and labels"
                     }
