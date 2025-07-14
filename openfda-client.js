@@ -10,6 +10,33 @@ const ENDPOINTS = {
 };
 
 /**
+ * Validate drug name input with helpful error messages
+ * @param {string} drugName - The drug name to validate
+ * @param {string} context - Context for error message (e.g., "shortages", "recalls")
+ * @returns {Object|null} - Returns error object if invalid, null if valid
+ */
+function validateDrugName(drugName, context = "drug information") {
+    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
+        const examples = {
+            "shortages": ["Try: insulin, metformin, lisinopril, acetaminophen, or Tylenol"],
+            "recalls": ["Try: insulin, acetaminophen, blood pressure medications"],
+            "trends": ["Try: insulin, metformin, lisinopril"],
+            "adverse events": ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
+            "serious adverse events": ["Try: warfarin, methotrexate, digoxin, lithium"],
+            "drug information": ["Try: metformin, atorvastatin, lisinopril, or Lipitor"]
+        };
+        
+        return {
+            error: `Please provide a medication name to search for ${context}`,
+            examples: examples[context] || examples["drug information"],
+            tip: "Use generic names (metformin) or brand names (Glucophage) - both work",
+            timestamp: new Date().toISOString()
+        };
+    }
+    return null;
+}
+
+/**
  * Normalize identifier type to ensure openFDA compatibility
  * This fixes the LibreChat identifier mismatch issue
  */
@@ -83,22 +110,9 @@ async function makeRequest(url, params) {
  */
 export async function searchDrugShortages(drugName, limit = 10) {
     // Enhanced input validation with helpful messages
-    if (!drugName || typeof drugName !== 'string') {
-        return {
-            error: "Please provide a medication name to search for shortages",
-            examples: ["Try: insulin, metformin, lisinopril, acetaminophen, or Tylenol"],
-            tip: "Both generic names (acetaminophen) and brand names (Tylenol) work",
-            timestamp: new Date().toISOString()
-        };
-    }
-
-    if (!drugName.trim()) {
-        return {
-            error: "Medication name cannot be empty",
-            examples: ["Try: insulin, metformin, lisinopril, acetaminophen, or Tylenol"],
-            tip: "Both generic names and brand names are supported",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "shortages");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
@@ -154,13 +168,9 @@ export async function searchDrugShortages(drugName, limit = 10) {
  */
 export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openfda.generic_name") {
     // Enhanced input validation
-    if (!drugIdentifier || typeof drugIdentifier !== 'string' || !drugIdentifier.trim()) {
-        return {
-            error: "Please provide a medication name to get FDA label information",
-            examples: ["Try: metformin, atorvastatin, lisinopril, or Lipitor"],
-            tip: "You can search by generic name (metformin) or brand name (Glucophage)",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugIdentifier, "drug information");
+    if (validationError) {
+        return validationError;
     }
 
     // Normalize the identifier type to fix LibreChat compatibility
@@ -201,13 +211,9 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
  */
 export async function searchDrugRecalls(drugName, limit = 10) {
     // Enhanced input validation
-    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
-        return {
-            error: "Please provide a medication name to search for recalls",
-            examples: ["Try: insulin, acetaminophen, blood pressure medications"],
-            tip: "Search works with both specific drug names and general medication categories",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "recalls");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
@@ -261,13 +267,9 @@ export async function searchDrugRecalls(drugName, limit = 10) {
  */
 export async function analyzeDrugMarketTrends(drugName, monthsBack = 12) {
     // Enhanced input validation
-    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
-        return {
-            error: "Please provide a medication name to analyze shortage trends",
-            examples: ["Try: insulin, metformin, lisinopril"],
-            tip: "Trend analysis works best with commonly prescribed medications",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "trends");
+    if (validationError) {
+        return validationError;
     }
 
     if (monthsBack < 1 || monthsBack > 60) {
@@ -330,7 +332,7 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
     }
 
     // Check for empty drug names
-    const emptyDrugs = drugList.filter((drug, index) => 
+    const emptyDrugs = drugList.filter(drug => 
         !drug || typeof drug !== 'string' || !drug.trim()
     );
 
@@ -386,13 +388,9 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
  */
 export async function getMedicationProfile(drugIdentifier, identifierType = "openfda.generic_name") {
     // Enhanced input validation
-    if (!drugIdentifier || typeof drugIdentifier !== 'string' || !drugIdentifier.trim()) {
-        return {
-            error: "Please provide a medication name to get the complete profile",
-            examples: ["Try: metformin, atorvastatin, lisinopril, or Lipitor"],
-            tip: "This combines FDA label data with current shortage information",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugIdentifier, "drug information");
+    if (validationError) {
+        return validationError;
     }
 
     // Normalize the identifier type to fix LibreChat compatibility
@@ -443,22 +441,9 @@ export async function getMedicationProfile(drugIdentifier, identifierType = "ope
  */
 export async function searchAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation with helpful messages
-    if (!drugName || typeof drugName !== 'string') {
-        return {
-            error: "Please provide a medication name to search for adverse events",
-            examples: ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
-            tip: "Both generic names (atorvastatin) and brand names (Lipitor) work",
-            timestamp: new Date().toISOString()
-        };
-    }
-
-    if (!drugName.trim()) {
-        return {
-            error: "Medication name cannot be empty for adverse event search",
-            examples: ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
-            tip: "This searches the FDA FAERS database for reported side effects",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "adverse events");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
@@ -532,13 +517,9 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
  */
 export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation
-    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
-        return {
-            error: "Please provide a medication name to search for serious adverse events",
-            examples: ["Try: warfarin, methotrexate, digoxin, lithium"],
-            tip: "Serious events include death, hospitalization, life-threatening conditions, or disability",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "serious adverse events");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
@@ -610,20 +591,11 @@ function generateAdverseEventSummary(data, drugName) {
     // Count reaction frequencies
     const reactionCounts = {};
     let seriousCount = 0;
-    let patientDemographics = { ages: [], sexes: [] };
     
     data.results.forEach(event => {
         // Count serious events
         if (event.serious === '1') {
             seriousCount++;
-        }
-        
-        // Collect patient data
-        if (event.patient?.patientonsetage) {
-            patientDemographics.ages.push(event.patient.patientonsetage);
-        }
-        if (event.patient?.patientsex) {
-            patientDemographics.sexes.push(event.patient.patientsex);
         }
         
         // Count reactions
