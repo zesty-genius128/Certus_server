@@ -433,10 +433,10 @@ export async function getMedicationProfile(drugIdentifier, identifierType = "ope
 }
 
 /**
- * Search for FDA adverse event reports (FAERS database)
- * Returns raw openFDA adverse event data with minimal processing
+ * Search for FDA adverse event reports (FAERS database) with hybrid response
+ * Returns summarized data by default, full raw data when detailed=true
  */
-export async function searchAdverseEvents(drugName, limit = 10) {
+export async function searchAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation with helpful messages
     if (!drugName || typeof drugName !== 'string') {
         return {
@@ -458,25 +458,21 @@ export async function searchAdverseEvents(drugName, limit = 10) {
 
     const cleanName = drugName.trim();
     
+    // For detailed queries, get more data; for summary, get enough to analyze
+    const fetchLimit = detailed ? limit : Math.max(limit * 4, 20);
+    
     // Define search strategies in order of preference for adverse events
     const searchStrategies = [
-        // Most common - drug name in medicinal product field
         `patient.drug.medicinalproduct:"${cleanName}"`,
-        
-        // OpenFDA standardized fields
         `patient.drug.openfda.generic_name:"${cleanName}"`,
         `patient.drug.openfda.brand_name:"${cleanName}"`,
-        
-        // Broader search without quotes
         `patient.drug.medicinalproduct:${cleanName}`,
-        
-        // Active substance search
         `patient.drug.activesubstance.activesubstancename:"${cleanName}"`
     ];
 
     // Try each strategy until we get results
     for (const search of searchStrategies) {
-        const params = buildParams(search, limit);
+        const params = buildParams(search, fetchLimit);
         const data = await makeRequest(ENDPOINTS.DRUG_EVENT, params);
         
         if (data.error && data.status !== 404) {
@@ -484,16 +480,24 @@ export async function searchAdverseEvents(drugName, limit = 10) {
         }
         
         if (data.results && data.results.length > 0) {
-            return {
-                search_term: drugName,
-                search_strategy: search,
-                data_source: "FDA Adverse Event Reporting System (FAERS)",
-                timestamp: new Date().toISOString(),
-                api_endpoint: ENDPOINTS.DRUG_EVENT,
-                note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
-                total_reports_available: data.meta?.results?.total || 0,
-                ...data // Spread the raw openFDA response
-            };
+            // Return detailed raw data if requested
+            if (detailed) {
+                return {
+                    search_term: drugName,
+                    search_strategy: search,
+                    data_source: "FDA Adverse Event Reporting System (FAERS)",
+                    timestamp: new Date().toISOString(),
+                    api_endpoint: ENDPOINTS.DRUG_EVENT,
+                    note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
+                    total_reports_available: data.meta?.results?.total || 0,
+                    response_mode: "detailed",
+                    ...data // Spread the raw openFDA response
+                };
+            }
+            
+            // Return summarized data by default
+            const summary = generateAdverseEventSummary(data, drugName);
+            return summary;
         }
     }
 
@@ -513,10 +517,10 @@ export async function searchAdverseEvents(drugName, limit = 10) {
 }
 
 /**
- * Search for serious adverse events only
- * Returns only adverse events that resulted in hospitalization, death, disability, etc.
+ * Search for serious adverse events only with hybrid response
+ * Returns summarized data by default, full raw data when detailed=true
  */
-export async function searchSeriousAdverseEvents(drugName, limit = 10) {
+export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation
     if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
         return {
@@ -529,10 +533,13 @@ export async function searchSeriousAdverseEvents(drugName, limit = 10) {
 
     const cleanName = drugName.trim();
     
+    // For detailed queries, get more data; for summary, get enough to analyze
+    const fetchLimit = detailed ? limit : Math.max(limit * 4, 20);
+    
     // Search for serious adverse events only (serious:1)
     const search = `patient.drug.medicinalproduct:"${cleanName}" AND serious:1`;
     
-    const params = buildParams(search, limit);
+    const params = buildParams(search, fetchLimit);
     const data = await makeRequest(ENDPOINTS.DRUG_EVENT, params);
     
     if (data.error) {
@@ -547,16 +554,24 @@ export async function searchSeriousAdverseEvents(drugName, limit = 10) {
     }
 
     if (data.results && data.results.length > 0) {
-        return {
-            search_term: drugName,
-            search_strategy: search,
-            data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
-            timestamp: new Date().toISOString(),
-            api_endpoint: ENDPOINTS.DRUG_EVENT,
-            warning: "These are serious adverse events that resulted in hospitalization, death, or disability",
-            total_serious_reports: data.meta?.results?.total || 0,
-            ...data
-        };
+        // Return detailed raw data if requested
+        if (detailed) {
+            return {
+                search_term: drugName,
+                search_strategy: search,
+                data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
+                timestamp: new Date().toISOString(),
+                api_endpoint: ENDPOINTS.DRUG_EVENT,
+                warning: "These are serious adverse events that resulted in hospitalization, death, or disability",
+                total_serious_reports: data.meta?.results?.total || 0,
+                response_mode: "detailed",
+                ...data
+            };
+        }
+        
+        // Return summarized data by default
+        const summary = generateSeriousEventSummary(data, drugName);
+        return summary;
     } else {
         return {
             search_term: drugName,
@@ -571,6 +586,180 @@ export async function searchSeriousAdverseEvents(drugName, limit = 10) {
     }
 }
 
+/**
+ * Generate summary for general adverse events
+ */
+function generateAdverseEventSummary(data, drugName) {
+    const totalReports = data.meta?.results?.total || 0;
+    const sampleSize = data.results.length;
+    
+    // Count reaction frequencies
+    const reactionCounts = {};
+    let seriousCount = 0;
+    let patientDemographics = { ages: [], sexes: [] };
+    
+    data.results.forEach(event => {
+        // Count serious events
+        if (event.serious === '1') {
+            seriousCount++;
+        }
+        
+        // Collect patient data
+        if (event.patient?.patientonsetage) {
+            patientDemographics.ages.push(event.patient.patientonsetage);
+        }
+        if (event.patient?.patientsex) {
+            patientDemographics.sexes.push(event.patient.patientsex);
+        }
+        
+        // Count reactions
+        if (event.patient?.reaction) {
+            event.patient.reaction.forEach(reaction => {
+                const term = reaction.reactionmeddrapt;
+                if (term) {
+                    reactionCounts[term] = (reactionCounts[term] || 0) + 1;
+                }
+            });
+        }
+    });
+    
+    // Get top reactions
+    const topReactions = Object.entries(reactionCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([reaction, count]) => ({ reaction, count }));
+    
+    const seriousPercentage = Math.round((seriousCount / sampleSize) * 100);
+    
+    return {
+        search_term: drugName,
+        data_source: "FDA Adverse Event Reporting System (FAERS)",
+        timestamp: new Date().toISOString(),
+        api_endpoint: ENDPOINTS.DRUG_EVENT,
+        response_mode: "summary",
+        summary: {
+            total_reports_in_database: totalReports,
+            sample_analyzed: sampleSize,
+            serious_events: {
+                count: seriousCount,
+                percentage: `${seriousPercentage}%`
+            },
+            top_reported_reactions: topReactions,
+            key_insights: generateKeyInsights(topReactions, seriousPercentage)
+        },
+        note: "This is a summary based on sample data. Use detailed=true for complete FDA reports.",
+        disclaimer: "These are adverse events reported to FDA. Not all events are caused by the drug."
+    };
+}
+
+/**
+ * Generate summary for serious adverse events
+ */
+function generateSeriousEventSummary(data, drugName) {
+    const totalReports = data.meta?.results?.total || 0;
+    const sampleSize = data.results.length;
+    
+    // Analyze types of serious events
+    const seriousTypes = {
+        death: 0,
+        hospitalization: 0,
+        lifeThreatening: 0,
+        disability: 0,
+        other: 0
+    };
+    
+    const reactionCounts = {};
+    
+    data.results.forEach(event => {
+        // Count serious event types
+        if (event.seriousnessdeath === '1') seriousTypes.death++;
+        if (event.seriousnesshospitalization === '1') seriousTypes.hospitalization++;
+        if (event.seriousnesslifethreatening === '1') seriousTypes.lifeThreatening++;
+        if (event.seriousnessdisabling === '1') seriousTypes.disability++;
+        if (event.seriousnessother === '1') seriousTypes.other++;
+        
+        // Count reactions in serious events
+        if (event.patient?.reaction) {
+            event.patient.reaction.forEach(reaction => {
+                const term = reaction.reactionmeddrapt;
+                if (term) {
+                    reactionCounts[term] = (reactionCounts[term] || 0) + 1;
+                }
+            });
+        }
+    });
+    
+    const topSeriousReactions = Object.entries(reactionCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([reaction, count]) => ({ reaction, count }));
+    
+    return {
+        search_term: drugName,
+        data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
+        timestamp: new Date().toISOString(),
+        api_endpoint: ENDPOINTS.DRUG_EVENT,
+        response_mode: "summary",
+        warning: "These are serious adverse events that resulted in hospitalization, death, or disability",
+        summary: {
+            total_serious_reports_in_database: totalReports,
+            sample_analyzed: sampleSize,
+            serious_event_types: {
+                death: seriousTypes.death,
+                hospitalization: seriousTypes.hospitalization,
+                life_threatening: seriousTypes.lifeThreatening,
+                disability: seriousTypes.disability,
+                other_serious: seriousTypes.other
+            },
+            top_reactions_in_serious_events: topSeriousReactions,
+            safety_alert: generateSafetyAlert(seriousTypes, topSeriousReactions)
+        },
+        note: "This is a summary of serious events only. Use detailed=true for complete FDA reports.",
+        disclaimer: "These are serious adverse events reported to FDA. Consult healthcare provider for medical advice."
+    };
+}
+
+/**
+ * Generate key insights for general adverse events
+ */
+function generateKeyInsights(topReactions, seriousPercentage) {
+    const insights = [];
+    
+    if (seriousPercentage > 50) {
+        insights.push("High proportion of serious events - use with caution");
+    } else if (seriousPercentage > 25) {
+        insights.push("Moderate proportion of serious events - monitor closely");
+    } else {
+        insights.push("Most reported events are non-serious");
+    }
+    
+    if (topReactions.length > 0) {
+        insights.push(`Most common reaction: ${topReactions[0].reaction}`);
+    }
+    
+    return insights;
+}
+
+/**
+ * Generate safety alert for serious events
+ */
+function generateSafetyAlert(seriousTypes, topReactions) {
+    const alerts = [];
+    
+    if (seriousTypes.death > 0) {
+        alerts.push(`${seriousTypes.death} death reports - requires careful monitoring`);
+    }
+    
+    if (seriousTypes.hospitalization > 0) {
+        alerts.push(`${seriousTypes.hospitalization} hospitalization reports`);
+    }
+    
+    if (topReactions.length > 0) {
+        alerts.push(`Primary serious reaction: ${topReactions[0].reaction}`);
+    }
+    
+    return alerts.length > 0 ? alerts : ["Review individual reports for specific safety concerns"];
+}
 /**
  * Health check function to verify API connectivity
  */

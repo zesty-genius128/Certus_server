@@ -262,49 +262,83 @@ export async function searchDrugRecalls(drugName, limit = 10) {
 }
 
 /**
- * Analyze drug market trends
- * Simplified version focusing on raw data
+ * Calculate days since a date
+ */
+function daysSince(dateStr) {
+    if (!dateStr) return 0;
+    const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
+    return days > 0 ? days : 0;
+}
+
+/**
+ * Analyze drug shortage trends using FDA historical data
  */
 export async function analyzeDrugMarketTrends(drugName, monthsBack = 12) {
-    // Enhanced input validation
     const validationError = validateDrugName(drugName, "trends");
-    if (validationError) {
-        return validationError;
-    }
+    if (validationError) return validationError;
 
     if (monthsBack < 1 || monthsBack > 60) {
         return {
             error: "Analysis period must be between 1 and 60 months",
             provided_months: monthsBack,
-            tip: "Try 6 months for recent trends or 24 months for longer patterns",
             timestamp: new Date().toISOString()
         };
     }
 
-    const params = buildParams(`"${drugName.trim()}"`, 100);
-    const data = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, params);
-    
-    if (data.error) {
-        return {
+    try {
+        // Get current shortage status
+        const currentParams = buildParams(`"${drugName.trim()}"`, 100);
+        const currentData = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, currentParams);
+        
+        // Get historical shortage event counts
+        const historyParams = buildParams(`openfda.generic_name:"${drugName.trim()}"`, 1000);
+        historyParams.append('count', 'initial_posting_date');
+        const historyData = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, historyParams);
+
+        // Build simple analysis
+        const analysis = {
             drug_name: drugName,
             analysis_period_months: monthsBack,
-            error: data.error,
-            suggestion: "Try using the generic name or check the spelling",
-            examples: ["If you searched 'Tylenol', try 'acetaminophen'"],
+            current_status: currentData.results?.length > 0 ? 
+                `${currentData.results.filter(r => r.status === "Current").length} active shortage(s)` : 
+                "No current shortages",
+            data_source: "FDA Drug Shortages Database",
+            timestamp: new Date().toISOString()
+        };
+
+        // Add current shortage details if any
+        if (currentData.results?.length > 0) {
+            const current = currentData.results.find(r => r.status === "Current");
+            if (current) {
+                analysis.current_shortage = {
+                    duration_days: daysSince(current.initial_posting_date),
+                    reason: current.shortage_reason || "Not specified",
+                    availability: current.availability || "Unknown",
+                    last_updated: current.update_date
+                };
+            }
+        }
+
+        // Add historical summary if available
+        if (historyData.results?.length > 0) {
+            const totalEvents = historyData.results.reduce((sum, event) => sum + event.count, 0);
+            analysis.historical_summary = {
+                total_shortage_events: totalEvents,
+                first_recorded: historyData.results[0]?.time.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
+                shortage_frequency: totalEvents > 5 ? "High" : totalEvents > 1 ? "Moderate" : "Low"
+            };
+        }
+
+        return analysis;
+
+    } catch (error) {
+        return {
+            drug_name: drugName,
+            error: "Failed to analyze drug trends",
+            details: error.message,
             timestamp: new Date().toISOString()
         };
     }
-
-    // Minimal processing - let Claude analyze the raw data
-    return {
-        drug_name: drugName,
-        analysis_period_months: monthsBack,
-        data_source: "FDA Drug Shortages Database",
-        timestamp: new Date().toISOString(),
-        api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
-        analysis_note: "Raw shortage records for trend analysis",
-        ...data
-    };
 }
 
 /**
