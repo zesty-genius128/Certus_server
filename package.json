@@ -7,12 +7,14 @@
   "scripts": {
     "start": "node official-mcp-server.js",
     "dev": "NODE_ENV=development nodemon official-mcp-server.js",
-    "test": "node test-all-tools.js",
+    "test": "node tests/comprehensive-test.js",
+    "test:legacy": "node tests/test-all-tools.js",
     "test:stdio": "node stdio-wrapper.js",
     "inspect": "npx @modelcontextprotocol/inspector node stdio-wrapper.js",
     "inspect:remote": "npx @modelcontextprotocol/inspector https://certus-server-production.up.railway.app/mcp",
-    "test:health": "curl https://certus-server-production.up.railway.app/health",
-    "test:tools": "curl https://certus-server-production.up.railway.app/tools",
+    "test:health": "curl https://certus.opensource.mieweb.org/health",
+    "test:tools": "curl https://certus.opensource.mieweb.org/tools",
+    "test:comprehensive": "node tests/comprehensive-test.js",
     "build": "echo 'No build step required'"
   },
   "engines": {
