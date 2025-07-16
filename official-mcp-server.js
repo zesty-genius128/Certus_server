@@ -286,6 +286,16 @@ app.get('/health', async (req, res) => {
 });
 
 /**
+ * Robots.txt endpoint - controls web crawler access
+ * @route GET /robots.txt
+ * @returns {String} Robots.txt content with crawler directives
+ */
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send('User-agent: *\nDisallow: /');
+});
+
+/**
  * Server information endpoint - provides API documentation and tool overview
  * @route GET /
  * @returns {Object} Server metadata, available tools, and architectural notes
