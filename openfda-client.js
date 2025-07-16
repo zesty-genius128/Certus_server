@@ -27,10 +27,7 @@ function validateDrugName(drugName, context = "drug information") {
         };
         
         return {
-            error: `Please provide a medication name to search for ${context}`,
-            examples: examples[context] || examples["drug information"],
-            tip: "Use generic names (metformin) or brand names (Glucophage) - both work",
-            timestamp: new Date().toISOString()
+            error: `Please provide a medication name to search for ${context}`
         };
     }
     return null;
@@ -98,7 +95,6 @@ async function makeRequest(url, params) {
     } catch (error) {
         return {
             error: error.message,
-            timestamp: new Date().toISOString(),
             endpoint: url
         };
     }
@@ -140,8 +136,7 @@ export async function searchDrugShortages(drugName, limit = 10) {
                 search_term: drugName,
                 search_strategy: search,
                 data_source: "FDA Drug Shortages Database",
-                timestamp: new Date().toISOString(),
-                api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
+                    api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
                 ...data // Spread the raw openFDA response
             };
         }
@@ -154,10 +149,8 @@ export async function searchDrugShortages(drugName, limit = 10) {
         meta: { results: { total: 0 } },
         message: `No current shortages found for "${drugName}" - this is good news!`,
         note: "Try checking the generic name if you searched for a brand name, or vice versa",
-        examples: ["If you searched 'Tylenol', try 'acetaminophen' or if you searched 'metformin', try 'Glucophage'"],
         search_strategies_tried: searchStrategies,
         data_source: "FDA Drug Shortages Database",
-        timestamp: new Date().toISOString(),
         api_endpoint: ENDPOINTS.DRUG_SHORTAGES
     };
 }
@@ -188,9 +181,7 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
             original_identifier_type: identifierType, // Keep original for debugging
             error: data.error,
             suggestion: "Try searching with the alternative name (generic vs brand name)",
-            examples: ["If you searched 'Tylenol', try 'acetaminophen' or if you searched 'metformin', try 'Glucophage'"],
-            timestamp: new Date().toISOString(),
-            api_endpoint: ENDPOINTS.DRUG_LABEL
+                api_endpoint: ENDPOINTS.DRUG_LABEL
         };
     }
 
@@ -239,8 +230,7 @@ export async function searchDrugRecalls(drugName, limit = 10) {
                 search_term: drugName,
                 search_strategy: search,
                 data_source: "FDA Drug Enforcement Database",
-                timestamp: new Date().toISOString(),
-                api_endpoint: ENDPOINTS.DRUG_ENFORCEMENT,
+                    api_endpoint: ENDPOINTS.DRUG_ENFORCEMENT,
                 ...data
             };
         }
@@ -253,7 +243,6 @@ export async function searchDrugRecalls(drugName, limit = 10) {
         meta: { results: { total: 0 } },
         message: `No recalls found for "${drugName}" - this is good news!`,
         note: "Try searching with alternative names or check the spelling",
-        examples: ["If you searched 'Tylenol', try 'acetaminophen' or try broader terms like 'pain medication'"],
         search_strategies_tried: searchStrategies,
         data_source: "FDA Drug Enforcement Database",
         timestamp: new Date().toISOString(),
@@ -350,8 +339,6 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
     if (!Array.isArray(drugList) || drugList.length === 0) {
         return {
             error: "Please provide a list of medication names for batch analysis",
-            examples: [["insulin", "metformin", "lisinopril"], ["Tylenol", "Advil", "aspirin"]],
-            tip: "You can mix generic and brand names in the same batch",
             timestamp: new Date().toISOString()
         };
     }
@@ -360,7 +347,6 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
         return {
             error: "Maximum 25 medications allowed per batch analysis",
             provided_count: drugList.length,
-            tip: "Try splitting your list into smaller batches for better performance",
             timestamp: new Date().toISOString()
         };
     }
@@ -374,8 +360,6 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
         return {
             error: "All medication names must be valid non-empty strings",
             invalid_entries: emptyDrugs.length,
-            tip: "Check your list for empty entries or invalid values",
-            examples: ["Valid: ['insulin', 'metformin'] Invalid: ['insulin', '', null]"],
             timestamp: new Date().toISOString()
         };
     }
@@ -510,8 +494,7 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
                     search_term: drugName,
                     search_strategy: search,
                     data_source: "FDA Adverse Event Reporting System (FAERS)",
-                    timestamp: new Date().toISOString(),
-                    api_endpoint: ENDPOINTS.DRUG_EVENT,
+                            api_endpoint: ENDPOINTS.DRUG_EVENT,
                     note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
                     total_reports_available: data.meta?.results?.total || 0,
                     response_mode: "detailed",
@@ -532,7 +515,6 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
         meta: { results: { total: 0 } },
         message: `No adverse events found in FDA database for "${drugName}"`,
         note: "This could mean the drug is very safe, very new, or try a different name",
-        examples: ["If you searched 'Tylenol', try 'acetaminophen' or if you searched 'Advil', try 'ibuprofen'"],
         search_strategies_tried: searchStrategies,
         data_source: "FDA Adverse Event Reporting System (FAERS)",
         timestamp: new Date().toISOString(),
@@ -572,8 +554,6 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
             search_term: drugName,
             error: data.error,
             suggestion: "Try using the generic name or check the spelling",
-            examples: ["If you searched 'Coumadin', try 'warfarin'"],
-            timestamp: new Date().toISOString(),
             api_endpoint: ENDPOINTS.DRUG_EVENT
         };
     }
@@ -585,8 +565,7 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
                 search_term: drugName,
                 search_strategy: search,
                 data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
-                timestamp: new Date().toISOString(),
-                api_endpoint: ENDPOINTS.DRUG_EVENT,
+                    api_endpoint: ENDPOINTS.DRUG_EVENT,
                 warning: "These are serious adverse events that resulted in hospitalization, death, or disability",
                 total_serious_reports: data.meta?.results?.total || 0,
                 response_mode: "detailed",
@@ -605,7 +584,6 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
             message: `No serious adverse events found for "${drugName}" - this is encouraging!`,
             note: "The absence of serious adverse events suggests good safety profile",
             data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
-            timestamp: new Date().toISOString(),
             api_endpoint: ENDPOINTS.DRUG_EVENT
         };
     }
