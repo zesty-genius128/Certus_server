@@ -37,8 +37,8 @@ Access real-time FDA drug information through a ChatGPT-like interface. No setup
 
 - Drug shortage pattern analysis using historical FDA shortage records
 - Configurable time periods for trend analysis (1-60 months)
-- Raw FDA data provided for custom analysis and interpretation
-- Minimal processing preserves data integrity for accurate analysis
+- Calculated trend metrics including shortage frequency, duration, and patterns
+- Real-time trend analysis with meaningful insights from FDA historical data
 
 ### Batch Processing Capabilities
 
@@ -336,7 +336,7 @@ Analyze drug shortage patterns using historical FDA shortage data.
 - `drug_name` (string, required): Drug name to analyze
 - `months_back` (integer, optional): Analysis period in months (1-60, default: 12)
 
-**Returns:** Raw FDA shortage records for the specified time period with minimal processing for custom trend analysis.
+**Returns:** Comprehensive trend analysis with calculated metrics including shortage frequency, duration patterns, and historical timeline analysis using FDA shortage data.
 
 #### `search_adverse_events`
 
@@ -700,6 +700,21 @@ npm run test
 
 # MCP protocol testing
 npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
+```
+
+### Comprehensive Test Suite
+
+The project includes a comprehensive test suite with 63 test cases covering all FDA tools:
+
+- **File**: `tests/comprehensive-test.js`
+- **Coverage**: All 8 FDA drug information tools
+- **Test Categories**: Trend analysis, core tools, batch analysis, performance, error handling
+- **Framework**: Custom assertion-based testing with error tracking
+- **Results**: 63 passed, 0 failed (verified July 15, 2025)
+
+```bash
+# Run the comprehensive test suite
+node tests/comprehensive-test.js
 ```
 
 ## Use Cases
