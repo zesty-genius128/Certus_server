@@ -607,12 +607,13 @@ Certus_server/
 
 ## API Endpoints
 
-| Endpoint   | Method | Description                              |
-|------------|--------|------------------------------------------|
-| `/health`  | GET    | Server health check and status           |
-| `/mcp`     | POST   | MCP JSON-RPC endpoint for tool calls     |
-| `/tools`   | GET    | List all available tools and schemas     |
-| `/`        | GET    | Server information and documentation     |
+| Endpoint     | Method | Description                              |
+|--------------|--------|------------------------------------------|
+| `/health`    | GET    | Server health check and status           |
+| `/mcp`       | POST   | MCP JSON-RPC endpoint for tool calls     |
+| `/tools`     | GET    | List all available tools and schemas     |
+| `/robots.txt`| GET    | Web crawler directives (blocks all crawlers) |
+| `/`          | GET    | Server information and documentation     |
 
 ## OpenFDA API Endpoints Used
 
