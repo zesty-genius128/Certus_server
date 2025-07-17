@@ -241,7 +241,7 @@ sequenceDiagram
     participant LibreChat
     participant mcpRemote["npx mcp-remote"]
     participant StdioWrapper["stdio-wrapper.js"]
-    participant CertusMCP["Certus MCP Server<br/>(HTTP JSON-RPC)"]
+    participant CertusMCP["Certus MCP Server"]
     participant FDAAPIs["FDA APIs"]
 
     Note over User,FDAAPIs: Universal MCP Client Architecture
