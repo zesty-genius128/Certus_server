@@ -237,53 +237,40 @@ In Claude Desktop, try asking:
 sequenceDiagram
     participant User
     participant ClaudeDesktop["Claude Desktop"]
-    participant VSCode["VS Code/Cursor"]
     participant LibreChat
-    participant mcpRemote["npx mcp-remote"]
+    participant mcpRemote1["npx mcp-remote"]
     participant StdioWrapper["stdio-wrapper.js"]
     participant CertusMCP["Certus MCP Server"]
     participant FDAAPIs["FDA APIs"]
 
-    Note over User,FDAAPIs: Universal MCP Client Architecture
+    Note over User,FDAAPIs: Healthcare-Focused MCP Architecture
 
     %% Claude Desktop Flow
     rect rgb(240, 248, 255)
-        Note over ClaudeDesktop,mcpRemote: Claude Desktop (stdio → HTTP)
-        User->>ClaudeDesktop: Ask about drug information
-        ClaudeDesktop->>mcpRemote: stdio JSON-RPC
-        mcpRemote->>CertusMCP: HTTP POST /mcp
-        CertusMCP-->>mcpRemote: MCP response
-        mcpRemote-->>ClaudeDesktop: stdio JSON-RPC
-        ClaudeDesktop-->>User: Medical information
-    end
-
-    %% VS Code/Cursor Flow
-    rect rgb(248, 255, 248)
-        Note over VSCode,mcpRemote: VS Code/Cursor (stdio → HTTP)
-        User->>VSCode: Ask about drug information
-        VSCode->>mcpRemote: stdio JSON-RPC
-        mcpRemote->>CertusMCP: HTTP POST /mcp
-        CertusMCP-->>mcpRemote: MCP response
-        mcpRemote-->>VSCode: stdio JSON-RPC
-        VSCode-->>User: Medical information
+        Note over ClaudeDesktop,mcpRemote1: Claude Desktop Integration
+        User->>ClaudeDesktop: "Check insulin shortage status"
+        ClaudeDesktop->>mcpRemote1: stdio JSON-RPC tool call
+        mcpRemote1->>CertusMCP: HTTP POST /mcp
+        Note over CertusMCP: search_drug_shortages tool
+        CertusMCP->>FDAAPIs: Query FDA shortage database
+        FDAAPIs-->>CertusMCP: Raw FDA shortage data
+        CertusMCP-->>mcpRemote1: MCP JSON-RPC response
+        mcpRemote1-->>ClaudeDesktop: stdio response
+        ClaudeDesktop-->>User: "No current insulin shortages found"
     end
 
     %% LibreChat Flow
     rect rgb(255, 248, 248)
-        Note over LibreChat,StdioWrapper: LibreChat (stdio → HTTP)
-        User->>LibreChat: Ask about drug information
-        LibreChat->>StdioWrapper: stdio JSON-RPC
+        Note over LibreChat,StdioWrapper: LibreChat Integration
+        User->>LibreChat: "What recalls for metformin?"
+        LibreChat->>StdioWrapper: stdio JSON-RPC tool call
         StdioWrapper->>CertusMCP: HTTP POST /mcp
-        CertusMCP-->>StdioWrapper: MCP response
-        StdioWrapper-->>LibreChat: stdio JSON-RPC
-        LibreChat-->>User: Medical information
-    end
-
-    %% Common Backend Flow
-    rect rgb(255, 255, 240)
-        Note over CertusMCP,FDAAPIs: FDA Data Processing
-        CertusMCP->>FDAAPIs: Multiple search strategies
-        FDAAPIs-->>CertusMCP: Raw FDA data
+        Note over CertusMCP: search_drug_recalls tool
+        CertusMCP->>FDAAPIs: Query FDA enforcement database
+        FDAAPIs-->>CertusMCP: Raw FDA recall data
+        CertusMCP-->>StdioWrapper: MCP JSON-RPC response
+        StdioWrapper-->>LibreChat: stdio response
+        LibreChat-->>User: "3 metformin recalls found..."
     end
 ```
 
@@ -291,13 +278,12 @@ sequenceDiagram
 
 **Frontend Layer:**
 
-- **Claude Desktop** - Primary MCP client with stdio transport support
-- **VS Code/Cursor/Windsurf** - IDE-based MCP clients with integrated AI assistants
-- **LibreChat Interface** - ChatGPT-like web interface at <https://certus-chat.opensource.mieweb.org>
+- **Claude Desktop** - Primary MCP client for healthcare professionals and patients seeking drug information
+- **LibreChat Interface** - ChatGPT-like web interface at <https://certus-chat.opensource.mieweb.org> for public access
 
 **Integration Layer:**
 
-- **npx mcp-remote** - Universal stdio-to-HTTP bridge for Claude Desktop and IDE clients
+- **npx mcp-remote** - Universal stdio-to-HTTP bridge for Claude Desktop client integration
 - **stdio-wrapper.js** - Custom stdio bridge specifically for LibreChat integration
 - **Transport Compatibility** - Handles protocol translation between stdio and HTTP MCP transports
 
@@ -307,13 +293,13 @@ sequenceDiagram
 - **OpenFDA Client** - Intelligent API client with multiple search strategies and error handling
 - **FDA Data Sources** - Drug Shortages, Labels, Enforcement, and Adverse Events (FAERS) databases
 
-**Universal Data Flow:**
+**Healthcare-Focused Data Flow:**
 
-1. User queries are processed by any MCP-compatible AI client (Claude Desktop, VS Code, LibreChat)
-2. Tool calls are routed through appropriate transport bridges (mcp-remote or stdio-wrapper) to HTTP endpoint
+1. Users ask healthcare-related questions through Claude Desktop or LibreChat interface
+2. Tool calls are routed through appropriate transport bridges (mcp-remote or stdio-wrapper) to HTTP endpoint  
 3. MCP server executes FDA API calls with intelligent fallback strategies and multiple search methods
-4. Raw FDA data is returned with minimal processing to preserve medical accuracy
-5. AI clients analyze and present medical information in user-friendly format across all platforms
+4. Raw FDA data is returned with minimal processing to preserve medical accuracy and regulatory compliance
+5. AI clients analyze and present medical information with appropriate disclaimers and safety warnings
 
 ## Available Tools
 
