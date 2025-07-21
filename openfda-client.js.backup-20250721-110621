@@ -101,32 +101,6 @@ async function makeRequest(url, params) {
 }
 
 /**
- * Generic search strategy executor - consolidates redundant search loop patterns
- * @param {Array<string>} searchStrategies - Array of search query strings to try
- * @param {string} endpoint - FDA API endpoint URL to query
- * @param {number} limit - Maximum number of results to fetch
- * @returns {Promise<Object|null>} - Returns FDA API response data or null if no results
- */
-async function performSearchStrategies(searchStrategies, endpoint, limit) {
-    for (const search of searchStrategies) {
-        const params = buildParams(search, limit);
-        const data = await makeRequest(endpoint, params);
-        
-        if (data.error && data.status !== 404) {
-            continue; // Try next strategy on error
-        }
-        
-        if (data.results && data.results.length > 0) {
-            return {
-                search_strategy: search,
-                data: data
-            };
-        }
-    }
-    return null; // No results found with any strategy
-}
-
-/**
  * Search for drug shortage information
  * Returns raw openFDA data with minimal processing
  */
@@ -148,17 +122,24 @@ export async function searchDrugShortages(drugName, limit = 10) {
         `openfda.brand_name:"${cleanName}"`
     ];
 
-    // Use generic search strategy executor
-    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_SHORTAGES, limit);
-    
-    if (result) {
-        return {
-            search_term: drugName,
-            search_strategy: result.search_strategy,
-            data_source: "FDA Drug Shortages Database",
-            api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
-            ...result.data // Spread the raw openFDA response
-        };
+    // Try each strategy until we get results
+    for (const search of searchStrategies) {
+        const params = buildParams(search, limit);
+        const data = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, params);
+        
+        if (data.error && data.status !== 404) {
+            continue; // Try next strategy on error
+        }
+        
+        if (data.results && data.results.length > 0) {
+            return {
+                search_term: drugName,
+                search_strategy: search,
+                data_source: "FDA Drug Shortages Database",
+                    api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
+                ...data // Spread the raw openFDA response
+            };
+        }
     }
 
     // Enhanced no results message
@@ -228,7 +209,7 @@ export async function searchDrugRecalls(drugName, limit = 10) {
 
     const cleanName = drugName.trim();
 
-    // Define search strategies for recalls
+    // Try multiple search strategies for recalls
     const searchStrategies = [
         `product_description:"${cleanName}"`,
         `product_description:${cleanName}`,
@@ -236,17 +217,23 @@ export async function searchDrugRecalls(drugName, limit = 10) {
         `openfda.brand_name:"${cleanName}"`
     ];
 
-    // Use generic search strategy executor
-    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_ENFORCEMENT, limit);
-    
-    if (result) {
-        return {
-            search_term: drugName,
-            search_strategy: result.search_strategy,
-            data_source: "FDA Drug Enforcement Database",
-            api_endpoint: ENDPOINTS.DRUG_ENFORCEMENT,
-            ...result.data
-        };
+    for (const search of searchStrategies) {
+        const params = buildParams(search, limit);
+        const data = await makeRequest(ENDPOINTS.DRUG_ENFORCEMENT, params);
+        
+        if (data.error && data.status !== 404) {
+            continue;
+        }
+        
+        if (data.results && data.results.length > 0) {
+            return {
+                search_term: drugName,
+                search_strategy: search,
+                data_source: "FDA Drug Enforcement Database",
+                    api_endpoint: ENDPOINTS.DRUG_ENFORCEMENT,
+                ...data
+            };
+        }
     }
 
     // Enhanced no results message
@@ -491,27 +478,34 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
         `patient.drug.activesubstance.activesubstancename:"${cleanName}"`
     ];
 
-    // Use generic search strategy executor
-    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_EVENT, fetchLimit);
-    
-    if (result) {
-        // Return detailed raw data if requested
-        if (detailed) {
-            return {
-                search_term: drugName,
-                search_strategy: result.search_strategy,
-                data_source: "FDA Adverse Event Reporting System (FAERS)",
-                api_endpoint: ENDPOINTS.DRUG_EVENT,
-                note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
-                total_reports_available: result.data.meta?.results?.total || 0,
-                response_mode: "detailed",
-                ...result.data // Spread the raw openFDA response
-            };
+    // Try each strategy until we get results
+    for (const search of searchStrategies) {
+        const params = buildParams(search, fetchLimit);
+        const data = await makeRequest(ENDPOINTS.DRUG_EVENT, params);
+        
+        if (data.error && data.status !== 404) {
+            continue; // Try next strategy on error
         }
         
-        // Return summarized data by default
-        const summary = generateAdverseEventSummary(result.data, drugName);
-        return summary;
+        if (data.results && data.results.length > 0) {
+            // Return detailed raw data if requested
+            if (detailed) {
+                return {
+                    search_term: drugName,
+                    search_strategy: search,
+                    data_source: "FDA Adverse Event Reporting System (FAERS)",
+                            api_endpoint: ENDPOINTS.DRUG_EVENT,
+                    note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
+                    total_reports_available: data.meta?.results?.total || 0,
+                    response_mode: "detailed",
+                    ...data // Spread the raw openFDA response
+                };
+            }
+            
+            // Return summarized data by default
+            const summary = generateAdverseEventSummary(data, drugName);
+            return summary;
+        }
     }
 
     // Enhanced no results message
