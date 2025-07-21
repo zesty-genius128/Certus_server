@@ -146,8 +146,8 @@ async function testValidation() {
             months_back: 12
         });
         test('Empty drug name - Returns error', result.error && result.error.includes('provide a medication name'));
-        test('Empty drug name - Has examples', Array.isArray(result.examples));
-        test('Empty drug name - Has tip', typeof result.tip === 'string');
+        test('Empty drug name - No examples field', result.examples === undefined);
+        test('Empty drug name - No tip field', result.tip === undefined);
     } catch (error) {
         test('Empty drug name - API call failed', false, error.message, 'error response');
     }
@@ -176,11 +176,20 @@ async function testCoreTools() {
         { tool: 'search_drug_recalls', args: { drug_name: 'acetaminophen', limit: 3 } }
     ];
     
+    const toolsWithTimestamp = ['search_adverse_events', 'get_drug_label_info'];
+    
     for (const toolTest of toolsToTest) {
         try {
             const result = await callTool(toolTest.tool, toolTest.args);
             test(`${toolTest.tool} - Returns valid response`, typeof result === 'object');
-            test(`${toolTest.tool} - Has timestamp`, result.timestamp && new Date(result.timestamp).getTime() > 0);
+            
+            // Only check timestamp for tools that have it
+            if (toolsWithTimestamp.includes(toolTest.tool)) {
+                test(`${toolTest.tool} - Has timestamp`, result.timestamp && new Date(result.timestamp).getTime() > 0);
+            } else {
+                test(`${toolTest.tool} - No timestamp field (optimized)`, result.timestamp === undefined);
+            }
+            
             test(`${toolTest.tool} - Has data source info`, result.data_source || result.api_endpoint);
         } catch (error) {
             test(`${toolTest.tool} - API call failed`, false, error.message, 'successful response');
