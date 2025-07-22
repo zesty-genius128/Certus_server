@@ -1,6 +1,10 @@
 # Certus Drug Information MCP Server
 
-A comprehensive Model Context Protocol (MCP) server providing real-time FDA drug information including shortages, recalls, labels, and market analysis. This server enables AI assistants and other MCP clients to access comprehensive pharmaceutical data using official FDA sources.
+**Enhance your AI agent with authoritative FDA drug information.**
+
+Certus is a Model Context Protocol (MCP) extension that connects your AI assistant (Claude, ChatGPT, etc.) directly to official FDA databases. Instead of relying on potentially outdated training data, your AI agent gets real-time, authoritative information about drug shortages, recalls, safety alerts, and prescribing information straight from the FDA.
+
+A comprehensive MCP server providing real-time FDA drug information including shortages, recalls, labels, and shortage trend analysis. This server enables AI assistants and other MCP clients to access comprehensive pharmaceutical data using official FDA sources.
 
 ## Try the Live Chatbot
 
@@ -137,7 +141,7 @@ Deploy the Certus server with any MCP-compatible client including:
 Use REST API endpoints for custom healthcare applications:
 
 - HTTP POST to `/mcp` endpoint for JSON-RPC tool calls
-- Direct tool endpoints at `/tools/{tool_name}` for simple HTTP integration
+- Tool schema listing at `/tools` endpoint for integration planning
 - Health monitoring via `/health` endpoint
 - Real-time data integration with existing systems
 
@@ -351,7 +355,7 @@ Retrieve FDA-approved drug label information and prescribing data.
 
 ### Advanced Analysis Tools
 
-#### `analyze_drug_market_trends`
+#### `analyze_drug_shortage_trends`
 
 Analyze drug shortage patterns using historical FDA shortage data.
 
