@@ -275,7 +275,7 @@ function daysSince(dateStr) {
 /**
  * Analyze drug shortage trends using FDA historical data
  */
-export async function analyzeDrugMarketTrends(drugName, monthsBack = 12) {
+export async function analyzeDrugShortageTrends(drugName, monthsBack = 12) {
     const validationError = validateDrugName(drugName, "trends");
     if (validationError) return validationError;
 
@@ -400,7 +400,7 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
             
             // Get trend data if requested
             if (includeTrends) {
-                analysis.trend_data = await analyzeDrugMarketTrends(drug, 6);
+                analysis.trend_data = await analyzeDrugShortageTrends(drug, 6);
             }
             
         } catch (error) {
