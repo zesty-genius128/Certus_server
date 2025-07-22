@@ -235,47 +235,35 @@ In Claude Desktop, try asking:
 
 ## System Architecture
 
-### Sequence Diagram
+### Architecture Overview
 
 ```mermaid
-sequenceDiagram
-    participant User
-    participant ClaudeDesktop["Claude Desktop"]
-    participant LibreChat
-    participant mcpRemote1["npx mcp-remote"]
-    participant StdioWrapper["stdio-wrapper.js"]
-    participant CertusMCP["Certus MCP Server"]
-    participant FDAAPIs["FDA APIs"]
-
-    Note over User,FDAAPIs: Healthcare-Focused MCP Architecture
-
-    %% Claude Desktop Flow
-    rect rgb(240, 248, 255)
-        Note over ClaudeDesktop,mcpRemote1: Claude Desktop Integration
-        User->>ClaudeDesktop: "Check insulin shortage status"
-        ClaudeDesktop->>mcpRemote1: stdio JSON-RPC tool call
-        mcpRemote1->>CertusMCP: HTTP POST /mcp
-        Note over CertusMCP: search_drug_shortages tool
-        CertusMCP->>FDAAPIs: Query FDA shortage database
-        FDAAPIs-->>CertusMCP: Raw FDA shortage data
-        CertusMCP-->>mcpRemote1: MCP JSON-RPC response
-        mcpRemote1-->>ClaudeDesktop: stdio response
-        ClaudeDesktop-->>User: "No current insulin shortages found"
-    end
-
-    %% LibreChat Flow
-    rect rgb(255, 248, 248)
-        Note over LibreChat,StdioWrapper: LibreChat Integration
-        User->>LibreChat: "What recalls for metformin?"
-        LibreChat->>StdioWrapper: stdio JSON-RPC tool call
-        StdioWrapper->>CertusMCP: HTTP POST /mcp
-        Note over CertusMCP: search_drug_recalls tool
-        CertusMCP->>FDAAPIs: Query FDA enforcement database
-        FDAAPIs-->>CertusMCP: Raw FDA recall data
-        CertusMCP-->>StdioWrapper: MCP JSON-RPC response
-        StdioWrapper-->>LibreChat: stdio response
-        LibreChat-->>User: "3 metformin recalls found..."
-    end
+graph TB
+    Users[Healthcare Professionals<br/>& Patients] --> Claude[Claude Desktop]
+    Users --> LibreChat[LibreChat Interface<br/>certus-chat.opensource.mieweb.org]
+    Users --> Other[Other MCP Clients<br/>VS Code, Cursor, etc.]
+    
+    Claude --> Bridge1[mcp-remote<br/>stdio bridge]
+    LibreChat --> Bridge2[stdio-wrapper.js<br/>custom bridge]
+    Other --> Bridge3[MCP Transport<br/>bridges]
+    
+    Bridge1 --> Server[Certus MCP Server<br/>Express.js + MCP 2024-11-05]
+    Bridge2 --> Server
+    Bridge3 --> Server
+    
+    Server --> Client[OpenFDA Client<br/>Intelligent Search]
+    Client --> FDA1[FDA Drug Shortages<br/>api.fda.gov/drug/shortages]
+    Client --> FDA2[FDA Drug Labels<br/>api.fda.gov/drug/label]
+    Client --> FDA3[FDA Enforcement<br/>api.fda.gov/drug/enforcement]
+    Client --> FDA4[FDA Adverse Events<br/>api.fda.gov/drug/event]
+    
+    style Users fill:#e1f5fe
+    style Server fill:#f3e5f5
+    style Client fill:#e8f5e8
+    style FDA1 fill:#fff3e0
+    style FDA2 fill:#fff3e0
+    style FDA3 fill:#fff3e0
+    style FDA4 fill:#fff3e0
 ```
 
 ### Architecture Components
