@@ -74,11 +74,11 @@ function test(description, condition, actual = null, expected = null) {
 
 // Test trend analysis with drugs that have shortages
 async function testTrendsWithShortages() {
-    console.log('\n[TEST] Testing Trend Analysis - Drugs With Shortages');
+    console.log('\n[TEST] Testing Shortage Trend Analysis - Drugs With Shortages');
     
     for (const drug of drugsWithShortages) {
         try {
-            const result = await callTool('analyze_drug_market_trends', {
+            const result = await callTool('analyze_drug_shortage_trends', {
                 drug_name: drug,
                 months_back: 12
             });
@@ -115,11 +115,11 @@ async function testTrendsWithShortages() {
 
 // Test trend analysis with drugs without shortages
 async function testTrendsWithoutShortages() {
-    console.log('\n[TEST] Testing Trend Analysis - Drugs Without Shortages');
+    console.log('\n[TEST] Testing Shortage Trend Analysis - Drugs Without Shortages');
     
     for (const drug of drugsWithoutShortages) {
         try {
-            const result = await callTool('analyze_drug_market_trends', {
+            const result = await callTool('analyze_drug_shortage_trends', {
                 drug_name: drug,
                 months_back: 6
             });
@@ -141,7 +141,7 @@ async function testValidation() {
     
     // Test empty drug name
     try {
-        const result = await callTool('analyze_drug_market_trends', {
+        const result = await callTool('analyze_drug_shortage_trends', {
             drug_name: '',
             months_back: 12
         });
@@ -154,7 +154,7 @@ async function testValidation() {
     
     // Test invalid months_back
     try {
-        const result = await callTool('analyze_drug_market_trends', {
+        const result = await callTool('analyze_drug_shortage_trends', {
             drug_name: 'metformin',
             months_back: 100
         });
@@ -226,7 +226,7 @@ async function testPerformance() {
     const startTime = Date.now();
     
     try {
-        await callTool('analyze_drug_market_trends', {
+        await callTool('analyze_drug_shortage_trends', {
             drug_name: 'Lisdexamfetamine',
             months_back: 12
         });

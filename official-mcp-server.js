@@ -27,7 +27,7 @@ import {
     searchDrugShortages,
     fetchDrugLabelInfo,
     searchDrugRecalls,
-    analyzeDrugMarketTrends,
+    analyzeDrugShortageTrends,
     batchDrugAnalysis,
     getMedicationProfile,
     searchAdverseEvents,
@@ -191,8 +191,8 @@ const TOOL_DEFINITIONS = [
         }
     },
     {
-        name: "analyze_drug_market_trends",
-        description: "Analyze drug shortage patterns over time. Use when asked about 'shortage trends', 'historical patterns', 'shortage analysis over time', or 'trends for [drug]'.",
+        name: "analyze_drug_shortage_trends",
+        description: "Analyze FDA drug shortage patterns over time. Use when asked about 'shortage trends', 'historical patterns', 'shortage analysis over time', or 'trends for [drug]'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -441,9 +441,9 @@ async function handleToolCall(name, args) {
                 result = await fetchDrugLabelInfo(args.drug_identifier, args.identifier_type || "openfda.generic_name");
                 break;
                 
-            case "analyze_drug_market_trends":
+            case "analyze_drug_shortage_trends":
                 log.tool(name, drugName, `months: ${args.months_back || 12}`);
-                result = await analyzeDrugMarketTrends(args.drug_name, args.months_back || 12);
+                result = await analyzeDrugShortageTrends(args.drug_name, args.months_back || 12);
                 break;
                 
             case "batch_drug_analysis":
