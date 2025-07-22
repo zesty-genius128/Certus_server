@@ -23,7 +23,7 @@ const TIMEOUT = 30000;
 
 // Test data - drugs we know have different shortage statuses
 const drugsWithShortages = ['Lisdexamfetamine', 'carboplatin'];
-const drugsWithoutShortages = ['metformin', 'insulin', 'acetaminophen'];
+const drugsWithoutShortages = ['metformin', 'aspirin', 'acetaminophen'];
 
 
 // Keep track of test results
