@@ -353,9 +353,9 @@ app.get('/mcp', (req, res) => {
             description: "FDA drug information with shortages, recalls, and labels"
         },
         capabilities: { 
-            tools: {},
-            resources: {},
-            prompts: {}
+            tools: { listChanged: true },
+            resources: { listChanged: true },
+            prompts: { listChanged: true }
         },
         transport: "http",
         endpoint: "/mcp",
@@ -386,9 +386,9 @@ app.post('/mcp', async (req, res) => {
                 response.result = {
                     protocolVersion: "2024-11-05",
                     capabilities: { 
-                        tools: {},
-                        resources: {},
-                        prompts: {}
+                        tools: { listChanged: true },
+                        resources: { listChanged: true },
+                        prompts: { listChanged: true }
                     },
                     serverInfo: {
                         name: "OpenFDA Drug Information MCP Server",
