@@ -286,6 +286,26 @@ app.get('/health', async (req, res) => {
 });
 
 /**
+ * OAuth server metadata endpoint for MCP 2025-03-26 compliance
+ * @route GET /.well-known/oauth-authorization-server
+ * @returns {Object} OAuth server metadata indicating no auth required
+ */
+app.get('/.well-known/oauth-authorization-server', (req, res) => {
+    log.server('OAuth metadata requested - indicating no auth required');
+    res.json({
+        issuer: `${req.protocol}://${req.get('host')}`,
+        authorization_endpoint: `${req.protocol}://${req.get('host')}/authorize`,
+        token_endpoint: `${req.protocol}://${req.get('host')}/token`,
+        registration_endpoint: `${req.protocol}://${req.get('host')}/register`,
+        scopes_supported: [],
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code"],
+        token_endpoint_auth_methods_supported: ["none"],
+        require_authentication: false
+    });
+});
+
+/**
  * Robots.txt endpoint - controls web crawler access
  * @route GET /robots.txt
  * @returns {String} Robots.txt content with crawler directives
@@ -358,28 +378,36 @@ app.get('/mcp', (req, res) => {
             'Access-Control-Allow-Headers': 'Cache-Control'
         });
 
-        // Send initial server info
-        const serverInfo = {
-            protocolVersion: "2024-11-05",
-            serverInfo: {
-                name: "OpenFDA Drug Information MCP Server",
-                version: "2.0.0",
-                description: "FDA drug information with shortages, recalls, and labels"
-            },
-            capabilities: { 
-                tools: { listChanged: true },
-                resources: { listChanged: true },
-                prompts: { listChanged: true }
-            },
-            transport: "sse",
-            tools_count: TOOL_DEFINITIONS.length
-        };
+        // Send connection established event
+        res.write('event: connected\n');
+        res.write('data: {"type": "connection_established"}\n\n');
 
-        res.write(`data: ${JSON.stringify(serverInfo)}\n\n`);
+        // Proactively send server capabilities as a JSON-RPC notification
+        const serverCapabilities = {
+            jsonrpc: "2.0",
+            method: "server/capabilities",
+            params: {
+                protocolVersion: "2024-11-05",
+                capabilities: { 
+                    tools: { listChanged: true },
+                    resources: { listChanged: true },
+                    prompts: { listChanged: true }
+                },
+                serverInfo: {
+                    name: "OpenFDA Drug Information MCP Server",
+                    version: "2.0.0",
+                    description: "FDA drug information with shortages, recalls, and labels"
+                },
+                tools_available: TOOL_DEFINITIONS.length
+            }
+        };
+        
+        res.write(`data: ${JSON.stringify(serverCapabilities)}\n\n`);
+        log.mcp('Sent server capabilities notification over SSE');
 
         // Keep connection alive
         const keepAlive = setInterval(() => {
-            res.write('data: {"type": "ping"}\n\n');
+            res.write(': ping\n\n');
         }, 30000);
 
         req.on('close', () => {
@@ -411,6 +439,81 @@ app.get('/mcp', (req, res) => {
 });
 
 /**
+ * Handle JSON-RPC 2.0 requests (shared between POST and SSE)
+ * @param {Object} request - JSON-RPC 2.0 request
+ * @returns {Object} JSON-RPC 2.0 response
+ */
+async function handleJsonRpcRequest(request) {
+    const { method, params, id } = request;
+    log.mcp(`Request received: ${method || 'unknown'}`);
+    
+    let response = {
+        jsonrpc: "2.0",
+        id: id
+    };
+
+    switch (method) {
+        case "initialize":
+            log.mcp('Initialize request - sending server capabilities');
+            response.result = {
+                protocolVersion: "2024-11-05",
+                capabilities: { 
+                    tools: { listChanged: true },
+                    resources: { listChanged: true },
+                    prompts: { listChanged: true }
+                },
+                serverInfo: {
+                    name: "OpenFDA Drug Information MCP Server",
+                    version: "2.0.0",
+                    description: "FDA drug information with shortages, recalls, and labels"
+                }
+            };
+            break;
+
+        case "ping":
+            log.mcp('Ping received - responding with empty object');
+            response.result = {};
+            break;
+
+        case "tools/list":
+            log.mcp(`Tools list requested - sending ${TOOL_DEFINITIONS.length} tool definitions`);
+            response.result = { tools: TOOL_DEFINITIONS };
+            break;
+
+        case "resources/list":
+            log.mcp('Resources list requested - no resources available');
+            response.result = { resources: [] };
+            break;
+
+        case "prompts/list":
+            log.mcp('Prompts list requested - no prompts available');
+            response.result = { prompts: [] };
+            break;
+
+        case "notifications/initialized":
+            log.mcp('Initialized notification received - acknowledging');
+            response.result = {};
+            break;
+
+        case "tools/call":
+            const { name, arguments: args } = params;
+            log.mcp(`Tool call: ${name}`);
+            
+            response.result = await handleToolCall(name, args);
+            break;
+
+        default:
+            log.warn('mcp', `Unknown method: ${method}`);
+            response.error = {
+                code: -32601,
+                message: `Unknown method: ${method}`
+            };
+    }
+
+    return response;
+}
+
+/**
  * Main MCP Protocol endpoint - handles JSON-RPC 2.0 requests
  * Supports: initialize, ping, tools/list, tools/call
  * @route POST /mcp
@@ -419,72 +522,7 @@ app.get('/mcp', (req, res) => {
  */
 app.post('/mcp', async (req, res) => {
     try {
-        const { method, params, id } = req.body;
-        log.mcp(`Request received: ${method || 'unknown'}`);
-        
-        let response = {
-            jsonrpc: "2.0",
-            id: id
-        };
-
-        switch (method) {
-            case "initialize":
-                log.mcp('Initialize request - sending server capabilities');
-                response.result = {
-                    protocolVersion: "2024-11-05",
-                    capabilities: { 
-                        tools: { listChanged: true },
-                        resources: { listChanged: true },
-                        prompts: { listChanged: true }
-                    },
-                    serverInfo: {
-                        name: "OpenFDA Drug Information MCP Server",
-                        version: "2.0.0",
-                        description: "FDA drug information with shortages, recalls, and labels"
-                    }
-                };
-                break;
-
-            case "ping":
-                log.mcp('Ping received - responding with empty object');
-                response.result = {};
-                break;
-
-            case "tools/list":
-                log.mcp(`Tools list requested - sending ${TOOL_DEFINITIONS.length} tool definitions`);
-                response.result = { tools: TOOL_DEFINITIONS };
-                break;
-
-            case "resources/list":
-                log.mcp('Resources list requested - no resources available');
-                response.result = { resources: [] };
-                break;
-
-            case "prompts/list":
-                log.mcp('Prompts list requested - no prompts available');
-                response.result = { prompts: [] };
-                break;
-
-            case "notifications/initialized":
-                log.mcp('Initialized notification received - acknowledging');
-                response.result = {};
-                break;
-
-            case "tools/call":
-                const { name, arguments: args } = params;
-                log.mcp(`Tool call: ${name}`);
-                
-                response.result = await handleToolCall(name, args);
-                break;
-
-            default:
-                log.warn('mcp', `Unknown method: ${method}`);
-                response.error = {
-                    code: -32601,
-                    message: `Unknown method: ${method}`
-                };
-        }
-
+        const response = await handleJsonRpcRequest(req.body);
         res.json(response);
         
     } catch (error) {
