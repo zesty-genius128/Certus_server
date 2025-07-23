@@ -339,11 +339,58 @@ app.get('/tools', (req, res) => {
 });
 
 /**
- * MCP GET endpoint - provides server information for client discovery
+ * MCP GET endpoint - provides server information for client discovery or SSE connection
  * @route GET /mcp
- * @returns {Object} Server capabilities and protocol information
+ * @returns {Object} Server capabilities and protocol information or SSE stream
  */
 app.get('/mcp', (req, res) => {
+    // Check if client wants SSE
+    const acceptHeader = req.get('Accept');
+    if (acceptHeader && acceptHeader.includes('text/event-stream')) {
+        log.mcp('SSE connection requested - starting event stream');
+        
+        // Set SSE headers
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Cache-Control'
+        });
+
+        // Send initial server info
+        const serverInfo = {
+            protocolVersion: "2024-11-05",
+            serverInfo: {
+                name: "OpenFDA Drug Information MCP Server",
+                version: "2.0.0",
+                description: "FDA drug information with shortages, recalls, and labels"
+            },
+            capabilities: { 
+                tools: { listChanged: true },
+                resources: { listChanged: true },
+                prompts: { listChanged: true }
+            },
+            transport: "sse",
+            tools_count: TOOL_DEFINITIONS.length
+        };
+
+        res.write(`data: ${JSON.stringify(serverInfo)}\n\n`);
+
+        // Keep connection alive
+        const keepAlive = setInterval(() => {
+            res.write('data: {"type": "ping"}\n\n');
+        }, 30000);
+
+        req.on('close', () => {
+            clearInterval(keepAlive);
+            log.mcp('SSE connection closed');
+        });
+
+        return;
+    }
+
+    // Standard HTTP response
     log.mcp('MCP GET request - providing server information');
     res.json({
         protocolVersion: "2024-11-05",
