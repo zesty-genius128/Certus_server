@@ -27,11 +27,11 @@ import {
     searchDrugShortages,
     fetchDrugLabelInfo,
     searchDrugRecalls,
-    analyzeDrugMarketTrends,
+    analyzeDrugShortageTrends,
     batchDrugAnalysis,
     getMedicationProfile,
-    searchAdverseEvents,        // ADD THIS
-    searchSeriousAdverseEvents, // ADD THIS
+    searchAdverseEvents,
+    searchSeriousAdverseEvents,
     healthCheck
 } from './openfda-client.js';
 
@@ -52,13 +52,13 @@ const log = {
 };
 
 /**
- * Tool definitions - single source of truth for all 6 FDA drug information tools
+ * Tool definitions - single source of truth for all 8 FDA drug information tools
  * Used by /tools endpoint, MCP tools/list, and documentation
  */
 const TOOL_DEFINITIONS = [
     {
         name: "search_drug_shortages",
-        description: "Search for current drug shortages using FDA data. Returns raw OpenFDA data with minimal processing.",
+        description: "Search current FDA drug shortages. Use when asked about drug availability, shortages, supply issues, or 'is [drug] in shortage'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -78,28 +78,60 @@ const TOOL_DEFINITIONS = [
         }
     },
     {
-        name: "get_medication_profile",
-        description: "Get complete drug information combining label and shortage data. Returns raw API responses.",
+        name: "search_adverse_events",
+        description: "Search FDA adverse events and side effects. Use when asked about 'side effects', 'adverse events', 'reactions', 'safety concerns', or 'what are the side effects of [drug]'.",
         inputSchema: {
             type: "object",
             properties: {
-                drug_identifier: {
+                drug_name: {
                     type: "string",
-                    description: "The drug identifier to search for"
+                    description: "Name of the drug to search for adverse events (generic or brand name)"
                 },
-                identifier_type: {
-                    type: "string",
-                    description: "The type of identifier",
-                    default: "openfda.generic_name",
-                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of adverse event reports to return",
+                    default: 5,
+                    minimum: 1,
+                    maximum: 50
+                },
+                detailed: {
+                    type: "boolean",
+                    description: "Return full raw FDA data (true) or summarized data (false). Default false for better performance.",
+                    default: false
                 }
             },
-            required: ["drug_identifier"]
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "search_serious_adverse_events",
+        description: "Search serious adverse events only (death, hospitalization, disability). Use when asked about 'serious side effects', 'dangerous reactions', 'fatal events', or 'hospitalizations from [drug]'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Name of the drug to search for serious adverse events"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of serious adverse event reports to return",
+                    default: 5,
+                    minimum: 1,
+                    maximum: 50
+                },
+                detailed: {
+                    type: "boolean",
+                    description: "Return full raw FDA data (true) or summarized data (false). Default false for better performance.",
+                    default: false
+                }
+            },
+            required: ["drug_name"]
         }
     },
     {
         name: "search_drug_recalls",
-        description: "Search for drug recalls using FDA enforcement database. Returns raw enforcement data.",
+        description: "Search FDA drug recalls and safety alerts. Use when asked about 'recalls', 'safety alerts', 'withdrawn drugs', or 'has [drug] been recalled'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -120,7 +152,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "get_drug_label_info",
-        description: "Get FDA label information for a drug. Returns raw structured product labeling data.",
+        description: "Get FDA prescribing information and drug labeling. Use when asked about 'prescribing info', 'FDA label', 'dosage forms', 'indications', or 'how is [drug] prescribed'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -139,8 +171,28 @@ const TOOL_DEFINITIONS = [
         }
     },
     {
-        name: "analyze_drug_market_trends",
-        description: "Analyze drug shortage patterns. Returns raw shortage data for trend analysis.",
+        name: "get_medication_profile",
+        description: "Get combined medication overview (label + shortage status only). Use when asked for 'complete information', 'full profile', or 'everything about [drug]' but NOT for side effects or adverse events.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_identifier: {
+                    type: "string",
+                    description: "The drug identifier to search for"
+                },
+                identifier_type: {
+                    type: "string",
+                    description: "The type of identifier",
+                    default: "openfda.generic_name",
+                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
+                }
+            },
+            required: ["drug_identifier"]
+        }
+    },
+    {
+        name: "analyze_drug_shortage_trends",
+        description: "Analyze FDA drug shortage patterns over time. Use when asked about 'shortage trends', 'historical patterns', 'shortage analysis over time', or 'trends for [drug]'.",
         inputSchema: {
             type: "object",
             properties: {
@@ -161,7 +213,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "batch_drug_analysis",
-        description: "Analyze multiple drugs simultaneously. Returns array of raw API responses.",
+        description: "Analyze multiple drugs simultaneously. Use when asked to 'compare multiple drugs', 'analyze this list of drugs', or given a list of 2+ medications to analyze.",
         inputSchema: {
             type: "object",
             properties: {
@@ -178,48 +230,6 @@ const TOOL_DEFINITIONS = [
                 }
             },
             required: ["drug_list"]
-        }
-    },
-    {
-        name: "search_adverse_events",
-        description: "Search FDA adverse event reports (FAERS database) for a medication. Returns reported side effects and reactions.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                drug_name: {
-                    type: "string",
-                    description: "Name of the drug to search for adverse events (generic or brand name)"
-                },
-                limit: {
-                    type: "integer",
-                    description: "Maximum number of adverse event reports to return",
-                    default: 10,
-                    minimum: 1,
-                    maximum: 50
-                }
-            },
-            required: ["drug_name"]
-        }
-    },
-    {
-        name: "search_serious_adverse_events",
-        description: "Search for serious adverse events only (hospitalization, death, disability) from FDA database for a medication.",
-        inputSchema: {
-            type: "object",
-            properties: {
-                drug_name: {
-                    type: "string",
-                    description: "Name of the drug to search for serious adverse events"
-                },
-                limit: {
-                    type: "integer",
-                    description: "Maximum number of serious adverse event reports to return",
-                    default: 10,
-                    minimum: 1,
-                    maximum: 50
-                }
-            },
-            required: ["drug_name"]
         }
     }
 ];
@@ -273,6 +283,16 @@ app.get('/health', async (req, res) => {
         log.error('health', `Health check failed: ${error.message}`);
         res.status(500).json({ status: 'unhealthy', error: error.message });
     }
+});
+
+/**
+ * Robots.txt endpoint - controls web crawler access
+ * @route GET /robots.txt
+ * @returns {String} Robots.txt content with crawler directives
+ */
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send('User-agent: *\nDisallow: /');
 });
 
 /**
@@ -342,7 +362,7 @@ app.post('/mcp', async (req, res) => {
                     protocolVersion: "2024-11-05",
                     capabilities: { tools: {} },
                     serverInfo: {
-                        name: "openfda-drug-information-mcp-server",
+                        name: "OpenFDA Drug Information MCP Server",
                         version: "2.0.0",
                         description: "FDA drug information with shortages, recalls, and labels"
                     }
@@ -421,9 +441,9 @@ async function handleToolCall(name, args) {
                 result = await fetchDrugLabelInfo(args.drug_identifier, args.identifier_type || "openfda.generic_name");
                 break;
                 
-            case "analyze_drug_market_trends":
+            case "analyze_drug_shortage_trends":
                 log.tool(name, drugName, `months: ${args.months_back || 12}`);
-                result = await analyzeDrugMarketTrends(args.drug_name, args.months_back || 12);
+                result = await analyzeDrugShortageTrends(args.drug_name, args.months_back || 12);
                 break;
                 
             case "batch_drug_analysis":
@@ -434,13 +454,13 @@ async function handleToolCall(name, args) {
                 result = await batchDrugAnalysis(args.drug_list, args.include_trends || false);
                 break;
             case "search_adverse_events":
-                log.tool(name, drugName, `limit: ${args.limit || 10}`);
-                result = await searchAdverseEvents(args.drug_name, args.limit || 10);
+                log.tool(name, drugName, `limit: ${args.limit || 5}, detailed: ${args.detailed || false}`);
+                result = await searchAdverseEvents(args.drug_name, args.limit || 5, args.detailed || false);
                 break;
                 
             case "search_serious_adverse_events":
-                log.tool(name, drugName, `limit: ${args.limit || 10}`);
-                result = await searchSeriousAdverseEvents(args.drug_name, args.limit || 10);
+                log.tool(name, drugName, `limit: ${args.limit || 5}, detailed: ${args.detailed || false}`);
+                result = await searchSeriousAdverseEvents(args.drug_name, args.limit || 5, args.detailed || false);
                 break;
                 
             default:
@@ -463,113 +483,6 @@ async function handleToolCall(name, args) {
     }
 }
 
-/**
- * Direct tool testing endpoints for debugging and development
- * These endpoints bypass MCP protocol for direct API testing
- */
-
-/**
- * Search drug shortages directly via HTTP
- * @route POST /tools/search_drug_shortages
- */
-app.post('/tools/search_drug_shortages', async (req, res) => {
-    try {
-        const { drug_name, limit = 10 } = req.body;
-        if (!drug_name) {
-            return res.status(400).json({ error: "drug_name is required" });
-        }
-        
-        log.tool('search_drug_shortages', drug_name, `direct HTTP call, limit: ${limit}`);
-        const result = await searchDrugShortages(drug_name, limit);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `search_drug_shortages HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Get medication profile directly via HTTP
- * @route POST /tools/get_medication_profile
- */
-app.post('/tools/get_medication_profile', async (req, res) => {
-    try {
-        const { drug_identifier, identifier_type = "openfda.generic_name" } = req.body;
-        if (!drug_identifier) {
-            return res.status(400).json({ error: "drug_identifier is required" });
-        }
-        
-        log.tool('get_medication_profile', drug_identifier, `direct HTTP call, type: ${identifier_type}`);
-        const result = await getMedicationProfile(drug_identifier, identifier_type);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `get_medication_profile HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Search drug recalls directly via HTTP
- * @route POST /tools/search_drug_recalls
- */
-app.post('/tools/search_drug_recalls', async (req, res) => {
-    try {
-        const { drug_name, limit = 10 } = req.body;
-        if (!drug_name) {
-            return res.status(400).json({ error: "drug_name is required" });
-        }
-        
-        log.tool('search_drug_recalls', drug_name, `direct HTTP call, limit: ${limit}`);
-        const result = await searchDrugRecalls(drug_name, limit);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `search_drug_recalls HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Analyze drug market trends directly via HTTP
- * @route POST /tools/analyze_drug_market_trends
- */
-app.post('/tools/analyze_drug_market_trends', async (req, res) => {
-    try {
-        const { drug_name, months_back = 12 } = req.body;
-        if (!drug_name) {
-            return res.status(400).json({ error: "drug_name is required" });
-        }
-        
-        log.tool('analyze_drug_market_trends', drug_name, `direct HTTP call, months: ${months_back}`);
-        const result = await analyzeDrugMarketTrends(drug_name, months_back);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `analyze_drug_market_trends HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * Batch drug analysis directly via HTTP
- * @route POST /tools/batch_drug_analysis
- */
-app.post('/tools/batch_drug_analysis', async (req, res) => {
-    try {
-        const { drug_list, include_trends = false } = req.body;
-        if (!drug_list || !Array.isArray(drug_list)) {
-            return res.status(400).json({ error: "drug_list is required and must be an array" });
-        }
-        if (drug_list.length > 25) {
-            return res.status(400).json({ error: "Maximum 25 drugs per batch" });
-        }
-        
-        log.tool('batch_drug_analysis', `${drug_list.length} drugs`, `direct HTTP call, trends: ${include_trends}`);
-        const result = await batchDrugAnalysis(drug_list, include_trends);
-        res.json(result);
-    } catch (error) {
-        log.error('tool', `batch_drug_analysis HTTP call failed: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
 
 /**
  * Global error handling middleware

@@ -339,6 +339,29 @@ app.get('/tools', (req, res) => {
 });
 
 /**
+ * MCP GET endpoint - provides server information for client discovery
+ * @route GET /mcp
+ * @returns {Object} Server capabilities and protocol information
+ */
+app.get('/mcp', (req, res) => {
+    log.mcp('MCP GET request - providing server information');
+    res.json({
+        protocolVersion: "2024-11-05",
+        serverInfo: {
+            name: "OpenFDA Drug Information MCP Server",
+            version: "2.0.0",
+            description: "FDA drug information with shortages, recalls, and labels"
+        },
+        capabilities: { 
+            tools: {} 
+        },
+        transport: "http",
+        endpoint: "/mcp",
+        tools_count: TOOL_DEFINITIONS.length
+    });
+});
+
+/**
  * Main MCP Protocol endpoint - handles JSON-RPC 2.0 requests
  * Supports: initialize, ping, tools/list, tools/call
  * @route POST /mcp
