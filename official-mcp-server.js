@@ -353,7 +353,9 @@ app.get('/mcp', (req, res) => {
             description: "FDA drug information with shortages, recalls, and labels"
         },
         capabilities: { 
-            tools: {} 
+            tools: {},
+            resources: {},
+            prompts: {}
         },
         transport: "http",
         endpoint: "/mcp",
@@ -383,7 +385,11 @@ app.post('/mcp', async (req, res) => {
                 log.mcp('Initialize request - sending server capabilities');
                 response.result = {
                     protocolVersion: "2024-11-05",
-                    capabilities: { tools: {} },
+                    capabilities: { 
+                        tools: {},
+                        resources: {},
+                        prompts: {}
+                    },
                     serverInfo: {
                         name: "OpenFDA Drug Information MCP Server",
                         version: "2.0.0",
@@ -400,6 +406,21 @@ app.post('/mcp', async (req, res) => {
             case "tools/list":
                 log.mcp(`Tools list requested - sending ${TOOL_DEFINITIONS.length} tool definitions`);
                 response.result = { tools: TOOL_DEFINITIONS };
+                break;
+
+            case "resources/list":
+                log.mcp('Resources list requested - no resources available');
+                response.result = { resources: [] };
+                break;
+
+            case "prompts/list":
+                log.mcp('Prompts list requested - no prompts available');
+                response.result = { prompts: [] };
+                break;
+
+            case "notifications/initialized":
+                log.mcp('Initialized notification received - acknowledging');
+                response.result = {};
                 break;
 
             case "tools/call":
