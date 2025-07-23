@@ -292,16 +292,20 @@ app.get('/health', async (req, res) => {
  */
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
     log.server('OAuth metadata requested - indicating no auth required');
+    const protocol = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const baseUrl = `${protocol}://${req.get('host')}`;
+    
     res.json({
-        issuer: `${req.protocol}://${req.get('host')}`,
-        authorization_endpoint: `${req.protocol}://${req.get('host')}/authorize`,
-        token_endpoint: `${req.protocol}://${req.get('host')}/token`,
-        registration_endpoint: `${req.protocol}://${req.get('host')}/register`,
+        issuer: baseUrl,
+        authorization_endpoint: `${baseUrl}/authorize`,
+        token_endpoint: `${baseUrl}/token`,
+        registration_endpoint: `${baseUrl}/register`,
         scopes_supported: [],
         response_types_supported: ["code"],
-        grant_types_supported: ["authorization_code"],
+        grant_types_supported: ["authorization_code"], 
         token_endpoint_auth_methods_supported: ["none"],
-        require_authentication: false
+        require_authentication: false,
+        mcp_transport: "http"
     });
 });
 
@@ -364,9 +368,9 @@ app.get('/tools', (req, res) => {
  * @returns {Object} Server capabilities and protocol information or SSE stream
  */
 app.get('/mcp', (req, res) => {
-    // Check if client wants SSE
+    // Check if client wants SSE - temporarily disabled for debugging
     const acceptHeader = req.get('Accept');
-    if (acceptHeader && acceptHeader.includes('text/event-stream')) {
+    if (false && acceptHeader && acceptHeader.includes('text/event-stream')) {
         log.mcp('SSE connection requested - starting event stream');
         
         // Set SSE headers
