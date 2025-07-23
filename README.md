@@ -2,15 +2,24 @@
 
 **Enhance your AI agent with authoritative FDA drug information.**
 
-Certus is a Model Context Protocol (MCP) extension that connects your AI assistant (Claude, ChatGPT, etc.) directly to official FDA databases. Instead of relying on potentially outdated training data, your AI agent gets real-time, authoritative information about drug shortages, recalls, safety alerts, and prescribing information straight from the FDA.
+Certus is a Model Context Protocol (MCP) extension that connects your AI
+assistant (Claude, ChatGPT, etc.) directly to official FDA databases. Instead
+of relying on potentially outdated training data, your AI agent gets real-time,
+authoritative information about drug shortages, recalls, safety alerts, and
+prescribing information straight from the FDA.
 
-A comprehensive MCP server providing real-time FDA drug information including shortages, recalls, labels, and shortage trend analysis. This server enables AI assistants and other MCP clients to access comprehensive pharmaceutical data using official FDA sources.
+A comprehensive MCP server providing real-time FDA drug information including
+shortages, recalls, labels, and shortage trend analysis. This server enables AI
+assistants and other MCP clients to access comprehensive pharmaceutical data
+using official FDA sources.
 
 ## Try the Live Chatbot
 
 **Test the Certus system immediately:** <https://certus-chat.opensource.mieweb.org>
 
-Access real-time FDA drug information through a ChatGPT-like interface. No setup required - just visit the link and start asking about drug shortages, recalls, and medication information.
+Access real-time FDA drug information through a ChatGPT-like interface. No
+setup required - just visit the link and start asking about drug shortages,
+recalls, and medication information.
 
 > **Note:** If your search does not return results right away, try asking the chatbot to check the identifier type again. This is a known limitation of the current chatbot implementation, not a server issue.
 
@@ -788,4 +797,5 @@ MIT License
 **Backup Server:** <https://certus-server-production.up.railway.app/mcp>  
 **Status:** Production Ready  
 **Protocol:** MCP 2024-11-05  
-**Data Sources:** FDA Drug Shortages, Labels, Enforcement, and Adverse Events (FAERS) Databases
+**Data Sources:** FDA Drug Shortages, Labels, Enforcement, and Adverse Events
+(FAERS) Databases
