@@ -1,17 +1,6 @@
 const OPENFDA_API_KEY = process.env.OPENFDA_API_KEY;
 const BASE_URL = "https://api.fda.gov";
 
-// In-memory cache for FDA API responses
-const cache = new Map();
-
-// Cache TTL settings (in minutes)
-const CACHE_TTL = {
-    DRUG_LABELS: 24 * 60,      // 24 hours - static data
-    DRUG_SHORTAGES: 2 * 60,    // 2 hours - frequently changing
-    DRUG_RECALLS: 12 * 60,     // 12 hours - semi-static
-    ADVERSE_EVENTS: 6 * 60     // 6 hours - balance freshness/performance
-};
-
 // Core API endpoints
 const ENDPOINTS = {
     DRUG_LABEL: `${BASE_URL}/drug/label.json`,
@@ -75,46 +64,6 @@ function buildParams(search, limit = 10, additionalParams = {}) {
     }
     
     return params;
-}
-
-/**
- * Check if cached data is still valid
- * @param {Object} cacheItem - Cache entry with data and timestamp
- * @param {number} ttlMinutes - Time to live in minutes
- * @returns {boolean} - True if cache is valid
- */
-function isCacheValid(cacheItem, ttlMinutes) {
-    if (!cacheItem) return false;
-    const now = Date.now();
-    const age = (now - cacheItem.timestamp) / (1000 * 60); // age in minutes
-    return age < ttlMinutes;
-}
-
-/**
- * Get data from cache or fetch from API
- * @param {string} cacheKey - Unique cache key
- * @param {Function} fetchFunction - Function to fetch data if cache miss
- * @param {number} ttlMinutes - Cache TTL in minutes
- * @returns {Promise<Object>} - Cached or fresh data
- */
-async function getCachedOrFetch(cacheKey, fetchFunction, ttlMinutes) {
-    const cacheItem = cache.get(cacheKey);
-    
-    if (isCacheValid(cacheItem, ttlMinutes)) {
-        console.log(`Cache HIT for key: ${cacheKey}`);
-        return cacheItem.data;
-    }
-    
-    console.log(`Cache MISS for key: ${cacheKey}`);
-    const freshData = await fetchFunction();
-    
-    // Store in cache with timestamp
-    cache.set(cacheKey, {
-        data: freshData,
-        timestamp: Date.now()
-    });
-    
-    return freshData;
 }
 
 /**
@@ -239,18 +188,10 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
     // Normalize the identifier type to fix LibreChat compatibility
     const normalizedType = normalizeIdentifierType(identifierType);
     
-    // Create cache key for this specific drug label request
-    const cacheKey = `drug_label_${normalizedType}_${drugIdentifier.trim().toLowerCase()}`;
+    const search = `${normalizedType}:"${drugIdentifier.trim()}"`;
+    const params = buildParams(search, 1);
     
-    // Define the fetch function for cache miss
-    const fetchFunction = async () => {
-        const search = `${normalizedType}:"${drugIdentifier.trim()}"`;
-        const params = buildParams(search, 1);
-        return await makeRequest(ENDPOINTS.DRUG_LABEL, params);
-    };
-    
-    // Get cached or fresh data
-    const data = await getCachedOrFetch(cacheKey, fetchFunction, CACHE_TTL.DRUG_LABELS);
+    const data = await makeRequest(ENDPOINTS.DRUG_LABEL, params);
     
     if (data.error) {
         return {
