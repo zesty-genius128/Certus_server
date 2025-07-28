@@ -91,78 +91,6 @@ function isCacheValid(cacheItem, ttlMinutes) {
 }
 
 /**
- * Clean expired entries from cache
- * Removes entries that have exceeded their TTL for any cache type
- */
-function cleanExpiredCache() {
-    const now = Date.now();
-    let cleanedCount = 0;
-    
-    for (const [key, item] of cache.entries()) {
-        // Determine TTL based on cache key prefix
-        let ttlMinutes;
-        if (key.startsWith('drug_label_')) {
-            ttlMinutes = CACHE_TTL.DRUG_LABELS;
-        } else if (key.startsWith('drug_shortage_')) {
-            ttlMinutes = CACHE_TTL.DRUG_SHORTAGES;
-        } else if (key.startsWith('drug_recall_')) {
-            ttlMinutes = CACHE_TTL.DRUG_RECALLS;
-        } else if (key.startsWith('adverse_event_')) {
-            ttlMinutes = CACHE_TTL.ADVERSE_EVENTS;
-        } else {
-            // Default to shortest TTL for unknown keys
-            ttlMinutes = CACHE_TTL.DRUG_SHORTAGES;
-        }
-        
-        // Check if expired and remove
-        if (!isCacheValid(item, ttlMinutes)) {
-            cache.delete(key);
-            cleanedCount++;
-            console.log(`Cleaned expired cache key: ${key}`);
-        }
-    }
-    
-    if (cleanedCount > 0) {
-        console.log(`Cache cleanup completed: ${cleanedCount} expired entries removed, ${cache.size} entries remaining`);
-    }
-}
-
-/**
- * Get cache statistics for monitoring
- * @returns {Object} Cache statistics including size, hit rates, memory usage
- */
-function getCacheStats() {
-    const stats = {
-        totalEntries: cache.size,
-        memoryUsageApprox: cache.size * 1024, // Rough estimate in bytes
-        entriesByType: {
-            drug_labels: 0,
-            drug_shortages: 0,
-            drug_recalls: 0,
-            adverse_events: 0,
-            other: 0
-        }
-    };
-    
-    // Count entries by type
-    for (const key of cache.keys()) {
-        if (key.startsWith('drug_label_')) {
-            stats.entriesByType.drug_labels++;
-        } else if (key.startsWith('drug_shortage_')) {
-            stats.entriesByType.drug_shortages++;
-        } else if (key.startsWith('drug_recall_')) {
-            stats.entriesByType.drug_recalls++;
-        } else if (key.startsWith('adverse_event_')) {
-            stats.entriesByType.adverse_events++;
-        } else {
-            stats.entriesByType.other++;
-        }
-    }
-    
-    return stats;
-}
-
-/**
  * Get data from cache or fetch from API
  * @param {string} cacheKey - Unique cache key
  * @param {Function} fetchFunction - Function to fetch data if cache miss
@@ -943,13 +871,3 @@ export async function healthCheck() {
         endpoints: results
     };
 }
-
-// Initialize periodic cache cleanup (runs every hour)
-const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
-setInterval(() => {
-    console.log('Starting periodic cache cleanup...');
-    cleanExpiredCache();
-}, CLEANUP_INTERVAL);
-
-// Export cache management functions for potential external use
-export { getCacheStats, cleanExpiredCache };
