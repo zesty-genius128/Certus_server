@@ -1,6 +1,17 @@
 const OPENFDA_API_KEY = process.env.OPENFDA_API_KEY;
 const BASE_URL = "https://api.fda.gov";
 
+// In-memory cache for FDA API responses
+const cache = new Map();
+
+// Cache TTL settings (in minutes)
+const CACHE_TTL = {
+    DRUG_LABELS: 24 * 60,      // 24 hours - static data
+    DRUG_SHORTAGES: 2 * 60,    // 2 hours - frequently changing
+    DRUG_RECALLS: 12 * 60,     // 12 hours - semi-static
+    ADVERSE_EVENTS: 6 * 60     // 6 hours - balance freshness/performance
+};
+
 // Core API endpoints
 const ENDPOINTS = {
     DRUG_LABEL: `${BASE_URL}/drug/label.json`,
@@ -8,6 +19,30 @@ const ENDPOINTS = {
     DRUG_ENFORCEMENT: `${BASE_URL}/drug/enforcement.json`,
     DRUG_EVENT: `${BASE_URL}/drug/event.json`
 };
+
+/**
+ * Validate drug name input with helpful error messages
+ * @param {string} drugName - The drug name to validate
+ * @param {string} context - Context for error message (e.g., "shortages", "recalls")
+ * @returns {Object|null} - Returns error object if invalid, null if valid
+ */
+function validateDrugName(drugName, context = "drug information") {
+    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
+        const examples = {
+            "shortages": ["Try: insulin, metformin, lisinopril, acetaminophen, or Tylenol"],
+            "recalls": ["Try: insulin, acetaminophen, blood pressure medications"],
+            "trends": ["Try: insulin, metformin, lisinopril"],
+            "adverse events": ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
+            "serious adverse events": ["Try: warfarin, methotrexate, digoxin, lithium"],
+            "drug information": ["Try: metformin, atorvastatin, lisinopril, or Lipitor"]
+        };
+        
+        return {
+            error: `Please provide a medication name to search for ${context}`
+        };
+    }
+    return null;
+}
 
 /**
  * Normalize identifier type to ensure openFDA compatibility
@@ -43,6 +78,118 @@ function buildParams(search, limit = 10, additionalParams = {}) {
 }
 
 /**
+ * Check if cached data is still valid
+ * @param {Object} cacheItem - Cache entry with data and timestamp
+ * @param {number} ttlMinutes - Time to live in minutes
+ * @returns {boolean} - True if cache is valid
+ */
+function isCacheValid(cacheItem, ttlMinutes) {
+    if (!cacheItem) return false;
+    const now = Date.now();
+    const age = (now - cacheItem.timestamp) / (1000 * 60); // age in minutes
+    return age < ttlMinutes;
+}
+
+/**
+ * Clean expired entries from cache
+ * Removes entries that have exceeded their TTL for any cache type
+ */
+function cleanExpiredCache() {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    for (const [key, item] of cache.entries()) {
+        // Determine TTL based on cache key prefix
+        let ttlMinutes;
+        if (key.startsWith('drug_label_')) {
+            ttlMinutes = CACHE_TTL.DRUG_LABELS;
+        } else if (key.startsWith('drug_shortage_')) {
+            ttlMinutes = CACHE_TTL.DRUG_SHORTAGES;
+        } else if (key.startsWith('drug_recall_')) {
+            ttlMinutes = CACHE_TTL.DRUG_RECALLS;
+        } else if (key.startsWith('adverse_event_')) {
+            ttlMinutes = CACHE_TTL.ADVERSE_EVENTS;
+        } else {
+            // Default to shortest TTL for unknown keys
+            ttlMinutes = CACHE_TTL.DRUG_SHORTAGES;
+        }
+        
+        // Check if expired and remove
+        if (!isCacheValid(item, ttlMinutes)) {
+            cache.delete(key);
+            cleanedCount++;
+            console.log(`Cleaned expired cache key: ${key}`);
+        }
+    }
+    
+    if (cleanedCount > 0) {
+        console.log(`Cache cleanup completed: ${cleanedCount} expired entries removed, ${cache.size} entries remaining`);
+    }
+}
+
+/**
+ * Get cache statistics for monitoring
+ * @returns {Object} Cache statistics including size, hit rates, memory usage
+ */
+function getCacheStats() {
+    const stats = {
+        totalEntries: cache.size,
+        memoryUsageApprox: cache.size * 1024, // Rough estimate in bytes
+        entriesByType: {
+            drug_labels: 0,
+            drug_shortages: 0,
+            drug_recalls: 0,
+            adverse_events: 0,
+            other: 0
+        }
+    };
+    
+    // Count entries by type
+    for (const key of cache.keys()) {
+        if (key.startsWith('drug_label_')) {
+            stats.entriesByType.drug_labels++;
+        } else if (key.startsWith('drug_shortage_')) {
+            stats.entriesByType.drug_shortages++;
+        } else if (key.startsWith('drug_recall_')) {
+            stats.entriesByType.drug_recalls++;
+        } else if (key.startsWith('adverse_event_')) {
+            stats.entriesByType.adverse_events++;
+        } else {
+            stats.entriesByType.other++;
+        }
+    }
+    
+    return stats;
+}
+
+/**
+ * Get data from cache or fetch from API
+ * @param {string} cacheKey - Unique cache key
+ * @param {Function} fetchFunction - Function to fetch data if cache miss
+ * @param {number} ttlMinutes - Cache TTL in minutes
+ * @returns {Promise<Object>} - Cached or fresh data
+ */
+async function getCachedOrFetch(cacheKey, fetchFunction, ttlMinutes) {
+    const cacheItem = cache.get(cacheKey);
+    
+    if (isCacheValid(cacheItem, ttlMinutes)) {
+        console.log(`Cache HIT for key: ${cacheKey}`);
+        return cacheItem.data;
+    }
+    
+    console.log(`Cache MISS for key: ${cacheKey}`);
+    const freshData = await fetchFunction();
+    
+    // Store in cache with timestamp
+    cache.set(cacheKey, {
+        data: freshData,
+        timestamp: Date.now()
+    });
+    
+    return freshData;
+}
+
+/**
  * Generic API request handler
  */
 async function makeRequest(url, params) {
@@ -51,7 +198,7 @@ async function makeRequest(url, params) {
             timeout: 15000,
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'OpenFDA-MCP-Client/1.0'
+                'User-Agent': 'OpenFDA-MCP-Client/2.0'
             }
         });
 
@@ -71,10 +218,35 @@ async function makeRequest(url, params) {
     } catch (error) {
         return {
             error: error.message,
-            timestamp: new Date().toISOString(),
             endpoint: url
         };
     }
+}
+
+/**
+ * Generic search strategy executor - consolidates redundant search loop patterns
+ * @param {Array<string>} searchStrategies - Array of search query strings to try
+ * @param {string} endpoint - FDA API endpoint URL to query
+ * @param {number} limit - Maximum number of results to fetch
+ * @returns {Promise<Object|null>} - Returns FDA API response data or null if no results
+ */
+async function performSearchStrategies(searchStrategies, endpoint, limit) {
+    for (const search of searchStrategies) {
+        const params = buildParams(search, limit);
+        const data = await makeRequest(endpoint, params);
+        
+        if (data.error && data.status !== 404) {
+            continue; // Try next strategy on error
+        }
+        
+        if (data.results && data.results.length > 0) {
+            return {
+                search_strategy: search,
+                data: data
+            };
+        }
+    }
+    return null; // No results found with any strategy
 }
 
 /**
@@ -83,22 +255,9 @@ async function makeRequest(url, params) {
  */
 export async function searchDrugShortages(drugName, limit = 10) {
     // Enhanced input validation with helpful messages
-    if (!drugName || typeof drugName !== 'string') {
-        return {
-            error: "Please provide a medication name to search for shortages",
-            examples: ["Try: insulin, metformin, lisinopril, acetaminophen, or Tylenol"],
-            tip: "Both generic names (acetaminophen) and brand names (Tylenol) work",
-            timestamp: new Date().toISOString()
-        };
-    }
-
-    if (!drugName.trim()) {
-        return {
-            error: "Medication name cannot be empty",
-            examples: ["Try: insulin, metformin, lisinopril, acetaminophen, or Tylenol"],
-            tip: "Both generic names and brand names are supported",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "shortages");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
@@ -112,25 +271,17 @@ export async function searchDrugShortages(drugName, limit = 10) {
         `openfda.brand_name:"${cleanName}"`
     ];
 
-    // Try each strategy until we get results
-    for (const search of searchStrategies) {
-        const params = buildParams(search, limit);
-        const data = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, params);
-        
-        if (data.error && data.status !== 404) {
-            continue; // Try next strategy on error
-        }
-        
-        if (data.results && data.results.length > 0) {
-            return {
-                search_term: drugName,
-                search_strategy: search,
-                data_source: "FDA Drug Shortages Database",
-                timestamp: new Date().toISOString(),
-                api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
-                ...data // Spread the raw openFDA response
-            };
-        }
+    // Use generic search strategy executor
+    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_SHORTAGES, limit);
+    
+    if (result) {
+        return {
+            search_term: drugName,
+            search_strategy: result.search_strategy,
+            data_source: "FDA Drug Shortages Database",
+            api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
+            ...result.data // Spread the raw openFDA response
+        };
     }
 
     // Enhanced no results message
@@ -140,10 +291,8 @@ export async function searchDrugShortages(drugName, limit = 10) {
         meta: { results: { total: 0 } },
         message: `No current shortages found for "${drugName}" - this is good news!`,
         note: "Try checking the generic name if you searched for a brand name, or vice versa",
-        examples: ["If you searched 'Tylenol', try 'acetaminophen' or if you searched 'metformin', try 'Glucophage'"],
         search_strategies_tried: searchStrategies,
         data_source: "FDA Drug Shortages Database",
-        timestamp: new Date().toISOString(),
         api_endpoint: ENDPOINTS.DRUG_SHORTAGES
     };
 }
@@ -154,22 +303,26 @@ export async function searchDrugShortages(drugName, limit = 10) {
  */
 export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openfda.generic_name") {
     // Enhanced input validation
-    if (!drugIdentifier || typeof drugIdentifier !== 'string' || !drugIdentifier.trim()) {
-        return {
-            error: "Please provide a medication name to get FDA label information",
-            examples: ["Try: metformin, atorvastatin, lisinopril, or Lipitor"],
-            tip: "You can search by generic name (metformin) or brand name (Glucophage)",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugIdentifier, "drug information");
+    if (validationError) {
+        return validationError;
     }
 
     // Normalize the identifier type to fix LibreChat compatibility
     const normalizedType = normalizeIdentifierType(identifierType);
     
-    const search = `${normalizedType}:"${drugIdentifier.trim()}"`;
-    const params = buildParams(search, 1);
+    // Create cache key for this specific drug label request
+    const cacheKey = `drug_label_${normalizedType}_${drugIdentifier.trim().toLowerCase()}`;
     
-    const data = await makeRequest(ENDPOINTS.DRUG_LABEL, params);
+    // Define the fetch function for cache miss
+    const fetchFunction = async () => {
+        const search = `${normalizedType}:"${drugIdentifier.trim()}"`;
+        const params = buildParams(search, 1);
+        return await makeRequest(ENDPOINTS.DRUG_LABEL, params);
+    };
+    
+    // Get cached or fresh data
+    const data = await getCachedOrFetch(cacheKey, fetchFunction, CACHE_TTL.DRUG_LABELS);
     
     if (data.error) {
         return {
@@ -178,9 +331,7 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
             original_identifier_type: identifierType, // Keep original for debugging
             error: data.error,
             suggestion: "Try searching with the alternative name (generic vs brand name)",
-            examples: ["If you searched 'Tylenol', try 'acetaminophen' or if you searched 'metformin', try 'Glucophage'"],
-            timestamp: new Date().toISOString(),
-            api_endpoint: ENDPOINTS.DRUG_LABEL
+                api_endpoint: ENDPOINTS.DRUG_LABEL
         };
     }
 
@@ -201,18 +352,14 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
  */
 export async function searchDrugRecalls(drugName, limit = 10) {
     // Enhanced input validation
-    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
-        return {
-            error: "Please provide a medication name to search for recalls",
-            examples: ["Try: insulin, acetaminophen, blood pressure medications"],
-            tip: "Search works with both specific drug names and general medication categories",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "recalls");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
 
-    // Try multiple search strategies for recalls
+    // Define search strategies for recalls
     const searchStrategies = [
         `product_description:"${cleanName}"`,
         `product_description:${cleanName}`,
@@ -220,24 +367,17 @@ export async function searchDrugRecalls(drugName, limit = 10) {
         `openfda.brand_name:"${cleanName}"`
     ];
 
-    for (const search of searchStrategies) {
-        const params = buildParams(search, limit);
-        const data = await makeRequest(ENDPOINTS.DRUG_ENFORCEMENT, params);
-        
-        if (data.error && data.status !== 404) {
-            continue;
-        }
-        
-        if (data.results && data.results.length > 0) {
-            return {
-                search_term: drugName,
-                search_strategy: search,
-                data_source: "FDA Drug Enforcement Database",
-                timestamp: new Date().toISOString(),
-                api_endpoint: ENDPOINTS.DRUG_ENFORCEMENT,
-                ...data
-            };
-        }
+    // Use generic search strategy executor
+    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_ENFORCEMENT, limit);
+    
+    if (result) {
+        return {
+            search_term: drugName,
+            search_strategy: result.search_strategy,
+            data_source: "FDA Drug Enforcement Database",
+            api_endpoint: ENDPOINTS.DRUG_ENFORCEMENT,
+            ...result.data
+        };
     }
 
     // Enhanced no results message
@@ -247,7 +387,6 @@ export async function searchDrugRecalls(drugName, limit = 10) {
         meta: { results: { total: 0 } },
         message: `No recalls found for "${drugName}" - this is good news!`,
         note: "Try searching with alternative names or check the spelling",
-        examples: ["If you searched 'Tylenol', try 'acetaminophen' or try broader terms like 'pain medication'"],
         search_strategies_tried: searchStrategies,
         data_source: "FDA Drug Enforcement Database",
         timestamp: new Date().toISOString(),
@@ -256,53 +395,83 @@ export async function searchDrugRecalls(drugName, limit = 10) {
 }
 
 /**
- * Analyze drug market trends
- * Simplified version focusing on raw data
+ * Calculate days since a date
  */
-export async function analyzeDrugMarketTrends(drugName, monthsBack = 12) {
-    // Enhanced input validation
-    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
-        return {
-            error: "Please provide a medication name to analyze shortage trends",
-            examples: ["Try: insulin, metformin, lisinopril"],
-            tip: "Trend analysis works best with commonly prescribed medications",
-            timestamp: new Date().toISOString()
-        };
-    }
+function daysSince(dateStr) {
+    if (!dateStr) return 0;
+    const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
+    return days > 0 ? days : 0;
+}
+
+/**
+ * Analyze drug shortage trends using FDA historical data
+ */
+export async function analyzeDrugShortageTrends(drugName, monthsBack = 12) {
+    const validationError = validateDrugName(drugName, "trends");
+    if (validationError) return validationError;
 
     if (monthsBack < 1 || monthsBack > 60) {
         return {
             error: "Analysis period must be between 1 and 60 months",
             provided_months: monthsBack,
-            tip: "Try 6 months for recent trends or 24 months for longer patterns",
             timestamp: new Date().toISOString()
         };
     }
 
-    const params = buildParams(`"${drugName.trim()}"`, 100);
-    const data = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, params);
-    
-    if (data.error) {
-        return {
+    try {
+        // Get current shortage status
+        const currentParams = buildParams(`"${drugName.trim()}"`, 100);
+        const currentData = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, currentParams);
+        
+        // Get historical shortage event counts
+        const historyParams = buildParams(`openfda.generic_name:"${drugName.trim()}"`, 1000);
+        historyParams.append('count', 'initial_posting_date');
+        const historyData = await makeRequest(ENDPOINTS.DRUG_SHORTAGES, historyParams);
+
+        // Build simple analysis
+        const analysis = {
             drug_name: drugName,
             analysis_period_months: monthsBack,
-            error: data.error,
-            suggestion: "Try using the generic name or check the spelling",
-            examples: ["If you searched 'Tylenol', try 'acetaminophen'"],
+            current_status: currentData.results?.length > 0 ? 
+                `${currentData.results.filter(r => r.status === "Current").length} active shortage(s)` : 
+                "No current shortages",
+            data_source: "FDA Drug Shortages Database",
+            timestamp: new Date().toISOString()
+        };
+
+        // Add current shortage details if any
+        if (currentData.results?.length > 0) {
+            const current = currentData.results.find(r => r.status === "Current");
+            if (current) {
+                analysis.current_shortage = {
+                    duration_days: daysSince(current.initial_posting_date),
+                    reason: current.shortage_reason || "Not specified",
+                    availability: current.availability || "Unknown",
+                    last_updated: current.update_date
+                };
+            }
+        }
+
+        // Add historical summary if available
+        if (historyData.results?.length > 0) {
+            const totalEvents = historyData.results.reduce((sum, event) => sum + event.count, 0);
+            analysis.historical_summary = {
+                total_shortage_events: totalEvents,
+                first_recorded: historyData.results[0]?.time.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
+                shortage_frequency: totalEvents > 5 ? "High" : totalEvents > 1 ? "Moderate" : "Low"
+            };
+        }
+
+        return analysis;
+
+    } catch (error) {
+        return {
+            drug_name: drugName,
+            error: "Failed to analyze drug trends",
+            details: error.message,
             timestamp: new Date().toISOString()
         };
     }
-
-    // Minimal processing - let Claude analyze the raw data
-    return {
-        drug_name: drugName,
-        analysis_period_months: monthsBack,
-        data_source: "FDA Drug Shortages Database",
-        timestamp: new Date().toISOString(),
-        api_endpoint: ENDPOINTS.DRUG_SHORTAGES,
-        analysis_note: "Raw shortage records for trend analysis",
-        ...data
-    };
 }
 
 /**
@@ -314,8 +483,6 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
     if (!Array.isArray(drugList) || drugList.length === 0) {
         return {
             error: "Please provide a list of medication names for batch analysis",
-            examples: [["insulin", "metformin", "lisinopril"], ["Tylenol", "Advil", "aspirin"]],
-            tip: "You can mix generic and brand names in the same batch",
             timestamp: new Date().toISOString()
         };
     }
@@ -324,13 +491,12 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
         return {
             error: "Maximum 25 medications allowed per batch analysis",
             provided_count: drugList.length,
-            tip: "Try splitting your list into smaller batches for better performance",
             timestamp: new Date().toISOString()
         };
     }
 
     // Check for empty drug names
-    const emptyDrugs = drugList.filter((drug, index) => 
+    const emptyDrugs = drugList.filter(drug => 
         !drug || typeof drug !== 'string' || !drug.trim()
     );
 
@@ -338,8 +504,6 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
         return {
             error: "All medication names must be valid non-empty strings",
             invalid_entries: emptyDrugs.length,
-            tip: "Check your list for empty entries or invalid values",
-            examples: ["Valid: ['insulin', 'metformin'] Invalid: ['insulin', '', null]"],
             timestamp: new Date().toISOString()
         };
     }
@@ -367,7 +531,7 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
             
             // Get trend data if requested
             if (includeTrends) {
-                analysis.trend_data = await analyzeDrugMarketTrends(drug, 6);
+                analysis.trend_data = await analyzeDrugShortageTrends(drug, 6);
             }
             
         } catch (error) {
@@ -386,13 +550,9 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
  */
 export async function getMedicationProfile(drugIdentifier, identifierType = "openfda.generic_name") {
     // Enhanced input validation
-    if (!drugIdentifier || typeof drugIdentifier !== 'string' || !drugIdentifier.trim()) {
-        return {
-            error: "Please provide a medication name to get the complete profile",
-            examples: ["Try: metformin, atorvastatin, lisinopril, or Lipitor"],
-            tip: "This combines FDA label data with current shortage information",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugIdentifier, "drug information");
+    if (validationError) {
+        return validationError;
     }
 
     // Normalize the identifier type to fix LibreChat compatibility
@@ -435,25 +595,17 @@ export async function getMedicationProfile(drugIdentifier, identifierType = "ope
 /**
  * Search for FDA adverse event reports (FAERS database) with hybrid response
  * Returns summarized data by default, full raw data when detailed=true
+ * 
+ * @param {string} drugName - Name of the drug to search for adverse events
+ * @param {number} [limit=5] - Maximum number of reports to return (1-50)
+ * @param {boolean} [detailed=false] - Return full raw FDA data or summary
+ * @returns {Promise<Object>} FDA FAERS data with adverse event reports
  */
 export async function searchAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation with helpful messages
-    if (!drugName || typeof drugName !== 'string') {
-        return {
-            error: "Please provide a medication name to search for adverse events",
-            examples: ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
-            tip: "Both generic names (atorvastatin) and brand names (Lipitor) work",
-            timestamp: new Date().toISOString()
-        };
-    }
-
-    if (!drugName.trim()) {
-        return {
-            error: "Medication name cannot be empty for adverse event search",
-            examples: ["Try: aspirin, metformin, atorvastatin, ibuprofen, or Lipitor"],
-            tip: "This searches the FDA FAERS database for reported side effects",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "adverse events");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
@@ -470,35 +622,27 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
         `patient.drug.activesubstance.activesubstancename:"${cleanName}"`
     ];
 
-    // Try each strategy until we get results
-    for (const search of searchStrategies) {
-        const params = buildParams(search, fetchLimit);
-        const data = await makeRequest(ENDPOINTS.DRUG_EVENT, params);
-        
-        if (data.error && data.status !== 404) {
-            continue; // Try next strategy on error
+    // Use generic search strategy executor
+    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_EVENT, fetchLimit);
+    
+    if (result) {
+        // Return detailed raw data if requested
+        if (detailed) {
+            return {
+                search_term: drugName,
+                search_strategy: result.search_strategy,
+                data_source: "FDA Adverse Event Reporting System (FAERS)",
+                api_endpoint: ENDPOINTS.DRUG_EVENT,
+                note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
+                total_reports_available: result.data.meta?.results?.total || 0,
+                response_mode: "detailed",
+                ...result.data // Spread the raw openFDA response
+            };
         }
         
-        if (data.results && data.results.length > 0) {
-            // Return detailed raw data if requested
-            if (detailed) {
-                return {
-                    search_term: drugName,
-                    search_strategy: search,
-                    data_source: "FDA Adverse Event Reporting System (FAERS)",
-                    timestamp: new Date().toISOString(),
-                    api_endpoint: ENDPOINTS.DRUG_EVENT,
-                    note: "These are adverse events reported to FDA. Not all events are caused by the drug.",
-                    total_reports_available: data.meta?.results?.total || 0,
-                    response_mode: "detailed",
-                    ...data // Spread the raw openFDA response
-                };
-            }
-            
-            // Return summarized data by default
-            const summary = generateAdverseEventSummary(data, drugName);
-            return summary;
-        }
+        // Return summarized data by default
+        const summary = generateAdverseEventSummary(result.data, drugName);
+        return summary;
     }
 
     // Enhanced no results message
@@ -508,7 +652,6 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
         meta: { results: { total: 0 } },
         message: `No adverse events found in FDA database for "${drugName}"`,
         note: "This could mean the drug is very safe, very new, or try a different name",
-        examples: ["If you searched 'Tylenol', try 'acetaminophen' or if you searched 'Advil', try 'ibuprofen'"],
         search_strategies_tried: searchStrategies,
         data_source: "FDA Adverse Event Reporting System (FAERS)",
         timestamp: new Date().toISOString(),
@@ -517,18 +660,19 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
 }
 
 /**
- * Search for serious adverse events only with hybrid response
+ * Search for serious adverse events only (death, hospitalization, disability) with hybrid response
  * Returns summarized data by default, full raw data when detailed=true
+ * 
+ * @param {string} drugName - Name of the drug to search for serious adverse events
+ * @param {number} [limit=5] - Maximum number of serious adverse event reports to return (1-50)
+ * @param {boolean} [detailed=false] - Return full raw FDA data or summary
+ * @returns {Promise<Object>} FDA FAERS data with serious adverse events only
  */
 export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed = false) {
     // Enhanced input validation
-    if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
-        return {
-            error: "Please provide a medication name to search for serious adverse events",
-            examples: ["Try: warfarin, methotrexate, digoxin, lithium"],
-            tip: "Serious events include death, hospitalization, life-threatening conditions, or disability",
-            timestamp: new Date().toISOString()
-        };
+    const validationError = validateDrugName(drugName, "serious adverse events");
+    if (validationError) {
+        return validationError;
     }
 
     const cleanName = drugName.trim();
@@ -547,8 +691,6 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
             search_term: drugName,
             error: data.error,
             suggestion: "Try using the generic name or check the spelling",
-            examples: ["If you searched 'Coumadin', try 'warfarin'"],
-            timestamp: new Date().toISOString(),
             api_endpoint: ENDPOINTS.DRUG_EVENT
         };
     }
@@ -560,8 +702,7 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
                 search_term: drugName,
                 search_strategy: search,
                 data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
-                timestamp: new Date().toISOString(),
-                api_endpoint: ENDPOINTS.DRUG_EVENT,
+                    api_endpoint: ENDPOINTS.DRUG_EVENT,
                 warning: "These are serious adverse events that resulted in hospitalization, death, or disability",
                 total_serious_reports: data.meta?.results?.total || 0,
                 response_mode: "detailed",
@@ -580,14 +721,17 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
             message: `No serious adverse events found for "${drugName}" - this is encouraging!`,
             note: "The absence of serious adverse events suggests good safety profile",
             data_source: "FDA Adverse Event Reporting System (FAERS) - Serious Events Only",
-            timestamp: new Date().toISOString(),
             api_endpoint: ENDPOINTS.DRUG_EVENT
         };
     }
 }
 
 /**
- * Generate summary for general adverse events
+ * Generate summary for general adverse events from FDA FAERS data
+ * 
+ * @param {Object} data - Raw FDA FAERS API response data
+ * @param {string} drugName - Name of the drug being analyzed
+ * @returns {Object} Summarized adverse event data with top reactions and key insights
  */
 function generateAdverseEventSummary(data, drugName) {
     const totalReports = data.meta?.results?.total || 0;
@@ -596,20 +740,11 @@ function generateAdverseEventSummary(data, drugName) {
     // Count reaction frequencies
     const reactionCounts = {};
     let seriousCount = 0;
-    let patientDemographics = { ages: [], sexes: [] };
     
     data.results.forEach(event => {
         // Count serious events
         if (event.serious === '1') {
             seriousCount++;
-        }
-        
-        // Collect patient data
-        if (event.patient?.patientonsetage) {
-            patientDemographics.ages.push(event.patient.patientonsetage);
-        }
-        if (event.patient?.patientsex) {
-            patientDemographics.sexes.push(event.patient.patientsex);
         }
         
         // Count reactions
@@ -653,7 +788,11 @@ function generateAdverseEventSummary(data, drugName) {
 }
 
 /**
- * Generate summary for serious adverse events
+ * Generate summary for serious adverse events from FDA FAERS data
+ * 
+ * @param {Object} data - Raw FDA FAERS API response data for serious events only
+ * @param {string} drugName - Name of the drug being analyzed
+ * @returns {Object} Summarized serious adverse event data with event types and safety alerts
  */
 function generateSeriousEventSummary(data, drugName) {
     const totalReports = data.meta?.results?.total || 0;
@@ -720,7 +859,11 @@ function generateSeriousEventSummary(data, drugName) {
 }
 
 /**
- * Generate key insights for general adverse events
+ * Generate key insights for general adverse events based on reaction patterns
+ * 
+ * @param {Array} topReactions - Array of top reported reactions with counts
+ * @param {number} seriousPercentage - Percentage of serious events in the sample
+ * @returns {Array<string>} Array of insight strings for user guidance
  */
 function generateKeyInsights(topReactions, seriousPercentage) {
     const insights = [];
@@ -741,7 +884,11 @@ function generateKeyInsights(topReactions, seriousPercentage) {
 }
 
 /**
- * Generate safety alert for serious events
+ * Generate safety alert for serious events based on event types and reactions
+ * 
+ * @param {Object} seriousTypes - Object containing counts of different serious event types
+ * @param {Array} topReactions - Array of top reported reactions in serious events
+ * @returns {Array<string>} Array of safety alert strings for medical awareness
  */
 function generateSafetyAlert(seriousTypes, topReactions) {
     const alerts = [];
@@ -796,3 +943,13 @@ export async function healthCheck() {
         endpoints: results
     };
 }
+
+// Initialize periodic cache cleanup (runs every hour)
+const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+setInterval(() => {
+    console.log('Starting periodic cache cleanup...');
+    cleanExpiredCache();
+}, CLEANUP_INTERVAL);
+
+// Export cache management functions for potential external use
+export { getCacheStats, cleanExpiredCache };
