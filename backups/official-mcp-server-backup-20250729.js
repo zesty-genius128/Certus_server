@@ -32,6 +32,8 @@ import {
     getMedicationProfile,
     searchAdverseEvents,
     searchSeriousAdverseEvents,
+    getCacheStats,
+    cleanExpiredCache,
     healthCheck
 } from './openfda-client.js';
 
@@ -293,6 +295,65 @@ app.get('/health', async (req, res) => {
 app.get('/robots.txt', (req, res) => {
     res.type('text/plain');
     res.send('User-agent: *\nDisallow: /');
+});
+
+/**
+ * Cache statistics endpoint - provides real-time cache monitoring
+ * @route GET /cache-stats
+ * @returns {Object} Cache statistics including size, memory usage, and entry breakdown
+ */
+app.get('/cache-stats', (req, res) => {
+    try {
+        log.server('Cache statistics requested');
+        const stats = getCacheStats();
+        
+        const response = {
+            timestamp: new Date().toISOString(),
+            status: 'active',
+            cache: stats,
+            cleanup: {
+                interval: '1 hour',
+                next_cleanup: 'automatic'
+            }
+        };
+        
+        res.json(response);
+        log.server(`Cache stats: ${stats.totalEntries} entries, ~${Math.round(stats.memoryUsageApprox/1024)}KB`);
+    } catch (error) {
+        log.error('cache-stats', `Cache stats failed: ${error.message}`);
+        res.status(500).json({ error: 'Failed to retrieve cache statistics' });
+    }
+});
+
+/**
+ * Manual cache cleanup endpoint - triggers immediate cache cleanup
+ * @route POST /cache-cleanup
+ * @returns {Object} Cleanup results and updated cache statistics
+ */
+app.post('/cache-cleanup', (req, res) => {
+    try {
+        log.server('Manual cache cleanup requested');
+        const statsBefore = getCacheStats();
+        
+        cleanExpiredCache();
+        
+        const statsAfter = getCacheStats();
+        const entriesRemoved = statsBefore.totalEntries - statsAfter.totalEntries;
+        
+        const response = {
+            timestamp: new Date().toISOString(),
+            cleanup_completed: true,
+            entries_removed: entriesRemoved,
+            cache_before: statsBefore,
+            cache_after: statsAfter
+        };
+        
+        res.json(response);
+        log.server(`Manual cleanup completed: ${entriesRemoved} entries removed`);
+    } catch (error) {
+        log.error('cache-cleanup', `Manual cache cleanup failed: ${error.message}`);
+        res.status(500).json({ error: 'Failed to perform cache cleanup' });
+    }
 });
 
 /**
