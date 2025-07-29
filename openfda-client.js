@@ -262,17 +262,26 @@ export async function searchDrugShortages(drugName, limit = 10) {
 
     const cleanName = drugName.trim();
     
-    // Define search strategies in order of preference
-    const searchStrategies = [
-        `"${cleanName}"`,
-        `generic_name:"${cleanName}"`,
-        `proprietary_name:"${cleanName}"`,
-        `openfda.generic_name:"${cleanName}"`,
-        `openfda.brand_name:"${cleanName}"`
-    ];
+    // Create cache key for this specific drug shortage request
+    const cacheKey = `drug_shortage_${cleanName.toLowerCase()}_limit${limit}`;
+    
+    // Define the fetch function for cache miss
+    const fetchFunction = async () => {
+        // Define search strategies in order of preference
+        const searchStrategies = [
+            `"${cleanName}"`,
+            `generic_name:"${cleanName}"`,
+            `proprietary_name:"${cleanName}"`,
+            `openfda.generic_name:"${cleanName}"`,
+            `openfda.brand_name:"${cleanName}"`
+        ];
 
-    // Use generic search strategy executor
-    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_SHORTAGES, limit);
+        // Use generic search strategy executor
+        return await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_SHORTAGES, limit);
+    };
+    
+    // Get cached or fresh data
+    const result = await getCachedOrFetch(cacheKey, fetchFunction, CACHE_TTL.DRUG_SHORTAGES);
     
     if (result) {
         return {
