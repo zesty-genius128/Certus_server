@@ -7,9 +7,9 @@ const cache = new Map();
 // Cache TTL settings (in minutes)
 const CACHE_TTL = {
     DRUG_LABELS: 24 * 60,      // 24 hours - static data
-    DRUG_SHORTAGES: 2 * 60,    // 2 hours - frequently changing
-    DRUG_RECALLS: 12 * 60,     // 12 hours - semi-static
-    ADVERSE_EVENTS: 6 * 60     // 6 hours - balance freshness/performance
+    DRUG_SHORTAGES: 30,        // 30 minutes - supply changes rapidly
+    DRUG_RECALLS: 12 * 60,     // 12 hours - semi-static (NOT USED - no caching for safety)
+    ADVERSE_EVENTS: 60         // 1 hour - balance safety freshness with performance
 };
 
 // Core API endpoints
@@ -367,9 +367,6 @@ export async function searchDrugRecalls(drugName, limit = 10) {
     }
 
     const cleanName = drugName.trim();
-    
-    // Create cache key for this specific drug recall request
-    const cacheKey = `drug_recall_${cleanName.toLowerCase()}_limit${limit}`;
 
     // Define search strategies for recalls
     const searchStrategies = [
@@ -379,14 +376,9 @@ export async function searchDrugRecalls(drugName, limit = 10) {
         `openfda.brand_name:"${cleanName}"`
     ];
 
-    // Define the fetch function for cache miss
-    const fetchFunction = async () => {
-        // Use generic search strategy executor
-        return await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_ENFORCEMENT, limit);
-    };
-    
-    // Get cached or fresh data
-    const result = await getCachedOrFetch(cacheKey, fetchFunction, CACHE_TTL.DRUG_RECALLS);
+    // MEDICAL SAFETY: No caching for recalls - urgent safety data must be current
+    // Use generic search strategy executor
+    const result = await performSearchStrategies(searchStrategies, ENDPOINTS.DRUG_ENFORCEMENT, limit);
     
     if (result) {
         return {
@@ -704,23 +696,15 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
 
     const cleanName = drugName.trim();
     
-    // Create cache key for this specific serious adverse events request
-    const cacheKey = `serious_adverse_event_${cleanName.toLowerCase()}_limit${limit}_detailed${detailed}`;
-    
     // For detailed queries, get more data; for summary, get enough to analyze
     const fetchLimit = detailed ? limit : Math.max(limit * 4, 20);
     
-    // Define the fetch function for cache miss
-    const fetchFunction = async () => {
-        // Search for serious adverse events only (serious:1)
-        const search = `patient.drug.medicinalproduct:"${cleanName}" AND serious:1`;
-        
-        const params = buildParams(search, fetchLimit);
-        return await makeRequest(ENDPOINTS.DRUG_EVENT, params);
-    };
+    // MEDICAL SAFETY: No caching for serious adverse events - life-threatening data must be current
+    // Search for serious adverse events only (serious:1)
+    const search = `patient.drug.medicinalproduct:"${cleanName}" AND serious:1`;
     
-    // Get cached or fresh data
-    const data = await getCachedOrFetch(cacheKey, fetchFunction, CACHE_TTL.ADVERSE_EVENTS);
+    const params = buildParams(search, fetchLimit);
+    const data = await makeRequest(ENDPOINTS.DRUG_EVENT, params);
     
     if (data.error) {
         return {
