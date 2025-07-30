@@ -5,8 +5,8 @@
 const SERVER_URL = process.env.SERVER_URL || 'https://certus-server-production.up.railway.app';
 
 async function testTool(toolName, args, description) {
-    console.log(`\nTOOLS Testing: ${toolName}`);
-    console.log(`NOTES ${description}`);
+    console.log(`\nTesting: ${toolName}`);
+    console.log(`${description}`);
     
     try {
         const response = await fetch(`${SERVER_URL}/mcp`, {
@@ -30,13 +30,13 @@ async function testTool(toolName, args, description) {
         const data = await response.json();
         
         if (data.error) {
-            console.log(`FAILED Error: ${data.error.message}`);
+            console.log(`Error: ${data.error.message}`);
             return false;
         }
         
         if (data.result && data.result.content) {
             const result = JSON.parse(data.result.content[0].text);
-            console.log(`SUCCESS Success!`);
+            console.log(`Success!`);
             
             // Display relevant info based on tool
             switch (toolName) {
@@ -87,37 +87,37 @@ async function testTool(toolName, args, description) {
             return true;
         }
         
-        console.log(`FAILED Unexpected response format`);
+        console.log(`Unexpected response format`);
         return false;
         
     } catch (error) {
-        console.log(`FAILED Error: ${error.message}`);
+        console.log(`Error: ${error.message}`);
         return false;
     }
 }
 
 async function testServerHealth() {
-    console.log(`HEALTH Testing server health at ${SERVER_URL}...`);
+    console.log(`Testing server health at ${SERVER_URL}...`);
     
     try {
         const response = await fetch(`${SERVER_URL}/health`);
         if (response.ok) {
             const data = await response.json();
-            console.log(`SUCCESS Server healthy: ${data.service}`);
+            console.log(`Server healthy: ${data.service}`);
             console.log(`   Tools Available: ${data.tools_available || 'Unknown'}`);
             return true;
         } else {
-            console.log(`FAILED Health check failed: ${response.status}`);
+            console.log(`Health check failed: ${response.status}`);
             return false;
         }
     } catch (error) {
-        console.log(`FAILED Cannot reach server: ${error.message}`);
+        console.log(`Cannot reach server: ${error.message}`);
         return false;
     }
 }
 
 async function testListTools() {
-    console.log(`\nLIST Testing tools list...`);
+    console.log(`\nTesting tools list...`);
     
     try {
         const response = await fetch(`${SERVER_URL}/mcp`, {
@@ -134,7 +134,7 @@ async function testListTools() {
         if (response.ok) {
             const data = await response.json();
             if (data.result && data.result.tools) {
-                console.log(`SUCCESS Found ${data.result.tools.length} tools:`);
+                console.log(`Found ${data.result.tools.length} tools:`);
                 data.result.tools.forEach((tool, index) => {
                     console.log(`   ${index + 1}. ${tool.name} - ${tool.description}`);
                 });
@@ -142,33 +142,33 @@ async function testListTools() {
             }
         }
         
-        console.log(`FAILED Failed to list tools`);
+        console.log(`Failed to list tools`);
         return [];
     } catch (error) {
-        console.log(`FAILED Error listing tools: ${error.message}`);
+        console.log(`Error listing tools: ${error.message}`);
         return [];
     }
 }
 
 async function main() {
-    console.log('ROCKET Certus MCP Server - Complete Tool Test');
+    console.log('Certus MCP Server - Complete Tool Test');
     console.log('========================================');
     
     // Test server health
     const isHealthy = await testServerHealth();
     if (!isHealthy) {
-        console.log('\nTIP Make sure the server is running and accessible');
+        console.log('\nMake sure the server is running and accessible');
         process.exit(1);
     }
     
     // Test tools list
     const tools = await testListTools();
     if (tools.length === 0) {
-        console.log('\nTIP No tools found - check server configuration');
+        console.log('\nNo tools found - check server configuration');
         process.exit(1);
     }
     
-    console.log('\nTEST Testing All Tools');
+    console.log('\nTesting All Tools');
     console.log('===================');
     
     const testResults = [];
@@ -222,24 +222,24 @@ async function main() {
     const passedTests = testResults.filter(result => result).length;
     const totalTests = testResults.length;
     
-    console.log('\nCHART Test Results Summary');
+    console.log('\nTest Results Summary');
     console.log('======================');
-    console.log(`SUCCESS Passed: ${passedTests}/${totalTests} tests`);
+    console.log(`Passed: ${passedTests}/${totalTests} tests`);
     
     if (passedTests === totalTests) {
-        console.log('SUCCESS All tools are working perfectly!');
-        console.log('\nTIP Your Certus MCP server is ready for Claude Desktop integration');
+        console.log('All tools are working perfectly!');
+        console.log('\nYour Certus MCP server is ready for Claude Desktop integration');
     } else {
-        console.log(`FAILED ${totalTests - passedTests} test(s) failed`);
-        console.log('\nTIP Check the errors above and verify your OpenFDA API connectivity');
+        console.log(`${totalTests - passedTests} test(s) failed`);
+        console.log('\nCheck the errors above and verify your OpenFDA API connectivity');
     }
     
-    console.log('\nLINK MCP Endpoint for Claude:');
+    console.log('\nMCP Endpoint for Claude:');
     console.log(`   ${SERVER_URL}/mcp`);
 }
 
 // Run tests
 main().catch(error => {
-    console.error('ERROR Test execution failed:', error);
+    console.error('Test execution failed:', error);
     process.exit(1);
 });

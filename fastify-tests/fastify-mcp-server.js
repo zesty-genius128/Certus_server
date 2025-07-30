@@ -108,7 +108,7 @@ const healthCheck = async () => {
     };
 };
 
-console.log('ROCKET Starting Fastify MCP Server...');
+console.log('Starting Fastify MCP Server...');
 
 const app = Fastify({ 
     logger: true
@@ -116,7 +116,7 @@ const app = Fastify({
 
 const PORT = process.env.PORT || 3001;
 
-console.log('PACKAGE Fastify app created, registering MCP plugin...');
+console.log('Fastify app created, registering MCP plugin...');
 
 /**
  * Register the MCP plugin with server configuration
@@ -124,7 +124,7 @@ console.log('PACKAGE Fastify app created, registering MCP plugin...');
  * Reference: https://www.npmjs.com/package/@platformatic/mcp
  * MCP Capabilities: https://modelcontextprotocol.io/specification/2025-03-26/basic/capabilities/
  */
-console.log('PLUGIN Registering @platformatic/mcp plugin...');
+console.log('Registering @platformatic/mcp plugin...');
 
 await app.register(mcpPlugin, {
     serverInfo: {
