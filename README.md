@@ -253,19 +253,21 @@ graph TB
     Bridge2 --> Server
     Bridge3 --> Server
     
-    Server --> Client[OpenFDA Client<br/>Intelligent Search]
-    Client --> FDA1[FDA Drug Shortages<br/>api.fda.gov/drug/shortages]
-    Client --> FDA2[FDA Drug Labels<br/>api.fda.gov/drug/label]
-    Client --> FDA3[FDA Enforcement<br/>api.fda.gov/drug/enforcement]
-    Client --> FDA4[FDA Adverse Events<br/>api.fda.gov/drug/event]
+    Server --> Client[OpenFDA Client<br/>Intelligent Search + Safety-First Caching]
+    Client --> Cache[Cache Layer<br/>TTL-based with Medical Safety Logic]
+    Cache --> FDA1[FDA Drug Shortages<br/>api.fda.gov/drug/shortages]
+    Cache --> FDA2[FDA Drug Labels<br/>api.fda.gov/drug/label]
+    Client --> FDA3[FDA Enforcement<br/>api.fda.gov/drug/enforcement<br/>ALWAYS FRESH - No Cache]
+    Client --> FDA4[FDA Adverse Events<br/>api.fda.gov/drug/event<br/>Serious Events: ALWAYS FRESH]
     
     style Users fill:#e1f5fe
     style Server fill:#f3e5f5
     style Client fill:#e8f5e8
+    style Cache fill:#f0f8ff
     style FDA1 fill:#fff3e0
     style FDA2 fill:#fff3e0
-    style FDA3 fill:#fff3e0
-    style FDA4 fill:#fff3e0
+    style FDA3 fill:#ffebee
+    style FDA4 fill:#ffebee
 ```
 
 ### Architecture Components
