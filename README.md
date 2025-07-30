@@ -558,7 +558,17 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 - Without API Key: 1,000 requests/day
 - With API Key: 120,000 requests/day
-- Intelligent Caching: Reduces API calls through smart result caching
+- **Medical Safety-First Caching**: Smart performance optimization with patient safety priority
+
+#### Current Caching Implementation (Updated July 29, 2025)
+
+- **✅ Drug Labels**: 24-hour TTL for static prescribing information
+- **✅ Drug Shortages**: 30-minute TTL for rapidly changing supply data  
+- **✅ Adverse Events**: 1-hour TTL balancing safety with performance
+- **❌ Drug Recalls**: NO CACHING - Urgent safety alerts must always be current
+- **❌ Serious Adverse Events**: NO CACHING - Life-threatening data requires fresh information
+
+**Medical Safety Priority**: Performance optimization never compromises patient safety. Urgent medical safety data (recalls, serious adverse events) bypasses caching to ensure healthcare professionals always receive the most current FDA information.
 
 ## Testing and Debugging
 
@@ -632,13 +642,15 @@ Certus_server/
 
 ## API Endpoints
 
-| Endpoint     | Method | Description                              |
-|--------------|--------|------------------------------------------|
-| `/health`    | GET    | Server health check and status           |
-| `/mcp`       | POST   | MCP JSON-RPC endpoint for tool calls     |
-| `/tools`     | GET    | List all available tools and schemas     |
-| `/robots.txt`| GET    | Web crawler directives (blocks all crawlers) |
-| `/`          | GET    | Server information and documentation     |
+| Endpoint       | Method | Description                              |
+|----------------|--------|------------------------------------------|
+| `/health`      | GET    | Server health check and status           |
+| `/mcp`         | POST   | MCP JSON-RPC endpoint for tool calls     |
+| `/tools`       | GET    | List all available tools and schemas     |
+| `/cache-stats` | GET    | Real-time cache statistics and monitoring |
+| `/cache-cleanup` | POST | Manual cache cleanup with statistics   |
+| `/robots.txt`  | GET    | Web crawler directives (blocks all crawlers) |
+| `/`            | GET    | Server information and documentation     |
 
 ## OpenFDA API Endpoints Used
 
@@ -691,6 +703,14 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - Efficient API usage with intelligent request batching
 - Formulary-wide assessment capabilities
 
+### Cache Management and Monitoring
+
+- **Real-Time Statistics**: Live cache monitoring with memory usage and entry breakdown
+- **Medical Safety Compliance**: Safety-critical data bypasses caching for patient protection
+- **Automatic Cleanup**: Hourly cache maintenance prevents memory leaks
+- **Manual Control**: Emergency cache clearing capability via `/cache-cleanup` endpoint
+- **Performance Tracking**: Cache hit/miss logging for optimization insights
+
 ## Troubleshooting
 
 ### Common Issues
@@ -721,6 +741,12 @@ curl https://certus.opensource.mieweb.org/health
 # View available tools
 curl https://certus.opensource.mieweb.org/tools
 
+# Check cache statistics and performance
+curl https://certus.opensource.mieweb.org/cache-stats
+
+# Manual cache cleanup (if needed)
+curl -X POST https://certus.opensource.mieweb.org/cache-cleanup
+
 # Test specific tool functionality
 npm run test
 
@@ -736,7 +762,7 @@ The project includes a comprehensive test suite with 63 test cases covering all 
 - **Coverage**: All 8 FDA drug information tools
 - **Test Categories**: Trend analysis, core tools, batch analysis, performance, error handling
 - **Framework**: Custom assertion-based testing with error tracking
-- **Results**: 63 passed, 0 failed (verified July 15, 2025)
+- **Results**: 63 passed, 0 failed (verified July 29, 2025 with medical safety caching)
 
 ```bash
 # Run the comprehensive test suite
@@ -777,6 +803,9 @@ node tests/comprehensive-test.js
 - **Transport:** HTTP POST (JSON-RPC) with stdio bridge compatibility
 - **Rate Limiting:** FDA API public limits (1,000 requests/day without API key)
 - **Tools Available:** 8 FDA drug information tools
+- **Caching:** Medical safety-first TTL-based caching (3 of 8 tools cached)
+- **Memory Management:** Automatic hourly cleanup with manual override capabilities
+- **Monitoring:** Real-time cache statistics and performance tracking
 - **CORS:** Enabled for cross-origin requests
 
 ## Resources
