@@ -285,7 +285,7 @@ graph TB
 
 - **Certus MCP Server** - Express.js server implementing MCP 2024-11-05 protocol with HTTP JSON-RPC
 - **OpenFDA Client** - Intelligent API client with multiple search strategies, error handling, and medical safety-first caching
-- **Cache Management** - TTL-based caching with automatic cleanup and medical safety compliance
+- **Cache Management** - TTL-based caching with automatic cleanup and medical safety logic (urgent safety data never cached)
 - **FDA Data Sources** - Drug Shortages, Labels, Enforcement, and Adverse Events (FAERS) databases
 
 **Healthcare-Focused Data Flow:**
@@ -293,7 +293,7 @@ graph TB
 1. Users ask healthcare-related questions through Claude Desktop or LibreChat interface
 2. Tool calls are routed through appropriate transport bridges (mcp-remote or stdio-wrapper) to HTTP endpoint  
 3. MCP server executes FDA API calls with intelligent fallback strategies and multiple search methods
-4. Medical safety-first caching applies: urgent safety data (recalls, serious adverse events) always fresh, other data cached appropriately
+4. Medical safety-first caching applies: recalls and serious adverse events get fresh data every time (because these involve patient emergencies), while other data is cached with appropriate time limits
 5. Raw FDA data is returned with minimal processing to preserve medical accuracy and regulatory compliance
 6. AI clients analyze and present medical information with appropriate disclaimers and safety warnings
 
@@ -563,7 +563,7 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 - **NOT CACHED Drug Recalls**: NO CACHING - Urgent safety alerts must always be current
 - **NOT CACHED Serious Adverse Events**: NO CACHING - Life-threatening data requires fresh information
 
-**Medical Safety Priority**: Performance optimization never compromises patient safety. Urgent medical safety data (recalls, serious adverse events) bypasses caching to ensure healthcare professionals always receive the most current FDA information.
+**Medical Safety Priority**: We cache data based on how quickly it changes and its safety impact. Drug recalls can happen at any time and serious adverse events involve life-threatening situations - caching this data could mean a doctor sees outdated information during an emergency. So recalls and serious adverse events always get fresh data from the FDA. Drug labels rarely change, so we cache those for 24 hours. Drug shortages change frequently but aren't usually life-threatening emergencies, so we cache them for 30 minutes. Regular adverse events are cached for 1 hour to balance safety with performance.
 
 ## Testing and Debugging
 
@@ -701,7 +701,7 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 ### Cache Management and Monitoring
 
 - **Real-Time Statistics**: Live cache monitoring with memory usage and entry breakdown
-- **Medical Safety Compliance**: Safety-critical data bypasses caching for patient protection
+- **Medical Safety Logic**: Safety-critical data (recalls, serious adverse events) bypasses caching because doctors need current information during patient emergencies
 - **Automatic Cleanup**: Hourly cache maintenance prevents memory leaks
 - **Manual Control**: Emergency cache clearing via `/cache-cleanup` endpoint
 - **Performance Tracking**: Cache hit/miss logging for optimization insights
@@ -798,7 +798,7 @@ node tests/comprehensive-test.js
 - **Transport:** HTTP POST (JSON-RPC) with stdio bridge compatibility
 - **Rate Limiting:** FDA API public limits (1,000 requests/day without API key)
 - **Tools Available:** 8 FDA drug information tools
-- **Caching:** Medical safety-first TTL-based caching (3 of 8 tools cached)
+- **Caching:** Medical safety-first TTL-based caching (3 of 8 tools cached - urgent safety data never cached)
 - **Memory Management:** Automatic hourly cleanup with manual override capabilities
 - **Monitoring:** Real-time cache statistics and performance tracking
 - **CORS:** Enabled for cross-origin requests
