@@ -5,13 +5,13 @@
  * Documentation: https://www.npmjs.com/package/fastify-mcp
  */
 
-console.log('🚀 Starting Simple Fastify MCP Server...');
+console.log('ROCKET Starting Simple Fastify MCP Server...');
 
 import Fastify from 'fastify';
 import { streamableHttp } from 'fastify-mcp';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 
-console.log('📦 Imports successful, creating Fastify app...');
+console.log('PACKAGE Imports successful, creating Fastify app...');
 
 const app = Fastify({ 
     logger: {
@@ -19,7 +19,7 @@ const app = Fastify({
     }
 });
 
-console.log('🔧 Creating MCP Server...');
+console.log('TOOLS Creating MCP Server...');
 
 // Create MCP Server function
 function createServer() {
@@ -53,7 +53,7 @@ function createServer() {
         const { name, arguments: args } = request.params;
         
         if (name === 'test_drug_search') {
-            console.log(`🔍 Test tool called with: ${args.drug_name}`);
+            console.log(`SEARCH Test tool called with: ${args.drug_name}`);
             return {
                 content: [
                     {
@@ -67,11 +67,11 @@ function createServer() {
         throw new Error(`Unknown tool: ${name}`);
     });
 
-    console.log('✅ MCP Server created with test tool');
+    console.log('SUCCESS MCP Server created with test tool');
     return mcpServer;
 }
 
-console.log('🔌 Registering streamableHttp plugin...');
+console.log('PLUGIN Registering streamableHttp plugin...');
 
 // Register the streamableHttp plugin
 await app.register(streamableHttp, {
@@ -80,7 +80,7 @@ await app.register(streamableHttp, {
     createServer
 });
 
-console.log('✅ Plugin registered successfully');
+console.log('SUCCESS Plugin registered successfully');
 
 // Health check endpoint
 app.get('/health', async (request, reply) => {
@@ -107,7 +107,7 @@ app.get('/', async (request, reply) => {
 
 const PORT = process.env.PORT || 3002;
 
-console.log('🚀 Starting server...');
+console.log('ROCKET Starting server...');
 
 try {
     await app.listen({ 
@@ -115,11 +115,11 @@ try {
         port: PORT 
     });
     
-    console.log(`✅ Server running on port ${PORT}`);
-    console.log(`🏥 Health: http://localhost:${PORT}/health`);
-    console.log(`🔗 MCP: http://localhost:${PORT}/mcp`);
+    console.log(`SUCCESS Server running on port ${PORT}`);
+    console.log(`HEALTH Health: http://localhost:${PORT}/health`);
+    console.log(`LINK MCP: http://localhost:${PORT}/mcp`);
     
 } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('FAILED Failed to start server:', error);
     process.exit(1);
 }

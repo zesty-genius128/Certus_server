@@ -562,11 +562,11 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 #### Current Caching Implementation (Updated July 29, 2025)
 
-- **✅ Drug Labels**: 24-hour TTL for static prescribing information
-- **✅ Drug Shortages**: 30-minute TTL for rapidly changing supply data  
-- **✅ Adverse Events**: 1-hour TTL balancing safety with performance
-- **❌ Drug Recalls**: NO CACHING - Urgent safety alerts must always be current
-- **❌ Serious Adverse Events**: NO CACHING - Life-threatening data requires fresh information
+- **CACHED Drug Labels**: 24-hour TTL for static prescribing information
+- **CACHED Drug Shortages**: 30-minute TTL for rapidly changing supply data  
+- **CACHED Adverse Events**: 1-hour TTL balancing safety with performance
+- **NOT CACHED Drug Recalls**: NO CACHING - Urgent safety alerts must always be current
+- **NOT CACHED Serious Adverse Events**: NO CACHING - Life-threatening data requires fresh information
 
 **Medical Safety Priority**: Performance optimization never compromises patient safety. Urgent medical safety data (recalls, serious adverse events) bypasses caching to ensure healthcare professionals always receive the most current FDA information.
 
