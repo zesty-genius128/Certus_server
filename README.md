@@ -284,7 +284,8 @@ graph TB
 **Backend Layer:**
 
 - **Certus MCP Server** - Express.js server implementing MCP 2024-11-05 protocol with HTTP JSON-RPC
-- **OpenFDA Client** - Intelligent API client with multiple search strategies and error handling
+- **OpenFDA Client** - Intelligent API client with multiple search strategies, error handling, and medical safety-first caching
+- **Cache Management** - TTL-based caching with automatic cleanup and medical safety compliance
 - **FDA Data Sources** - Drug Shortages, Labels, Enforcement, and Adverse Events (FAERS) databases
 
 **Healthcare-Focused Data Flow:**
@@ -292,8 +293,9 @@ graph TB
 1. Users ask healthcare-related questions through Claude Desktop or LibreChat interface
 2. Tool calls are routed through appropriate transport bridges (mcp-remote or stdio-wrapper) to HTTP endpoint  
 3. MCP server executes FDA API calls with intelligent fallback strategies and multiple search methods
-4. Raw FDA data is returned with minimal processing to preserve medical accuracy and regulatory compliance
-5. AI clients analyze and present medical information with appropriate disclaimers and safety warnings
+4. Medical safety-first caching applies: urgent safety data (recalls, serious adverse events) always fresh, other data cached appropriately
+5. Raw FDA data is returned with minimal processing to preserve medical accuracy and regulatory compliance
+6. AI clients analyze and present medical information with appropriate disclaimers and safety warnings
 
 ## Available Tools
 
