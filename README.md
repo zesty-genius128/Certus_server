@@ -1,17 +1,10 @@
 # Certus Drug Information MCP Server
 
-**Enhance your AI agent with authoritative FDA drug information.**
+**Get current FDA drug data in your AI assistant.**
 
-Certus is a Model Context Protocol (MCP) extension that connects your AI
-assistant (Claude, ChatGPT, etc.) directly to official FDA databases. Instead
-of relying on potentially outdated training data, your AI agent gets real-time,
-authoritative information about drug shortages, recalls, safety alerts, and
-prescribing information straight from the FDA.
+Certus connects Claude, ChatGPT, and other AI assistants to official FDA databases. Your AI gets fresh information about drug shortages, recalls, and prescribing details instead of outdated training data.
 
-A comprehensive MCP server providing real-time FDA drug information including
-shortages, recalls, labels, and shortage trend analysis. This server enables AI
-assistants and other MCP clients to access comprehensive pharmaceutical data
-using official FDA sources.
+This server gives you real-time access to FDA drug information including shortages, recalls, labels, and trend analysis.
 
 ## Try the Live Chatbot
 
@@ -27,54 +20,54 @@ recalls, and medication information.
 
 ### Real-Time Drug Shortage Information
 
-- Search current FDA drug shortage database by generic or brand name
-- Multiple search strategies to handle name variations and misspellings
-- Raw FDA shortage data with minimal processing for accuracy
-- Returns shortage reasons, resolution estimates, and affected product details when available
+- Search the FDA drug shortage database by generic or brand name
+- Handles name variations and misspellings automatically
+- Gets raw FDA data without extra processing
+- Shows shortage reasons, resolution estimates, and product details
 
-### Comprehensive FDA Drug Label Data
+### FDA Drug Label Data
 
-- Complete FDA-approved prescribing information and structured product labeling
-- Generic and brand name cross-referencing through openFDA identifiers
-- Dosage forms, strengths, routes of administration, and manufacturer information
+- Complete FDA-approved prescribing information
+- Generic and brand name cross-referencing
+- Dosage forms, strengths, routes of administration, and manufacturer details
 - Active ingredients, indications, contraindications, warnings, and adverse reactions
 
 ### Drug Recall and Safety Information
 
-- Real-time search of FDA enforcement database for drug recalls
-- Recall classification (Class I, II, III), reason for recall, and affected lot information
-- Product descriptions, distribution information, and recall initiation dates
-- Raw FDA enforcement data for comprehensive recall analysis
+- Search the FDA enforcement database for drug recalls
+- Recall classification (Class I, II, III), reason for recall, and affected lots
+- Product descriptions, distribution information, and recall dates
+- Raw FDA enforcement data
 
 ### Historical Data Analysis
 
-- Drug shortage pattern analysis using historical FDA shortage records
-- Configurable time periods for trend analysis (1-60 months)
-- Calculated trend metrics including shortage frequency, duration, and patterns
-- Real-time trend analysis with meaningful insights from FDA historical data
+- Analyzes drug shortage patterns from historical FDA records
+- Set time periods for trend analysis (1-60 months)
+- Shows shortage frequency, duration, and patterns
+- Real-time trend analysis from FDA historical data
 
-### Batch Processing Capabilities
+### Batch Processing
 
-- Simultaneous analysis of up to 25 medications in a single request
-- Combined shortage, recall, and optional trend data for each drug
-- Efficient formulary-wide assessment with single API call
-- Structured results for each drug in the batch with error handling
+- Analyze up to 25 medications at once
+- Get shortage, recall, and trend data for each drug
+- Check entire formularies with one request
+- Results organized by drug with error handling
 
 ### Clinical Information Integration
 
-- Combined medication profiles with both FDA label and current shortage data
-- Intelligent search across multiple FDA identifier types (generic name, brand name, openFDA fields)
+- Combined medication profiles with FDA label and shortage data
+- Searches multiple FDA identifier types (generic name, brand name, openFDA fields)
 - Cross-referenced data from FDA drug label and shortage databases
-- Streamlined access to comprehensive FDA medication information
+- Access to comprehensive FDA medication information
 
 ### FDA Adverse Event Reporting (FAERS)
 
-- Search comprehensive FDA adverse event database for reported side effects and reactions
+- Search the FDA adverse event database for reported side effects and reactions
 - Filter for serious adverse events only (hospitalization, death, disability, life-threatening conditions)
 - Raw FAERS data with patient demographics, reaction terms, and safety report details
-- Both general adverse events and serious events filtering with medical disclaimers
+- General adverse events and serious events filtering with medical disclaimers
 
-> **Note:** Adverse events queries may return large datasets. For comparative queries, use individual drug searches rather than asking to compare multiple drugs simultaneously to avoid token limits.
+> **Note:** Adverse event searches can return large datasets. Search individual drugs rather than comparing multiple drugs at once to avoid hitting limits.
 
 ## How to Use the Chatbot
 
@@ -130,20 +123,20 @@ Visit <https://certus-chat.opensource.mieweb.org> and ask questions like:
 
 ### Web-Based Chatbot Interface
 
-Access the live chatbot at <https://certus-chat.opensource.mieweb.org> for immediate drug information queries without any setup required.
+Use the live chatbot at <https://certus-chat.opensource.mieweb.org> for immediate drug information queries. No setup needed.
 
 ### Claude Desktop Integration
 
-Add Certus tools directly to Claude Desktop for integrated AI assistant workflow with FDA drug data access.
+Add Certus tools directly to Claude Desktop. Works with your existing AI assistant workflow.
 
 ### Custom MCP Client Development
 
-Deploy the Certus server with any MCP-compatible client including:
+Deploy the Certus server with any MCP-compatible client:
 
 - LibreChat for custom healthcare chatbots
 - VS Code with MCP extensions for development environments
 - Custom applications using MCP client libraries
-- Third-party MCP-compatible tools and platforms
+- Third-party MCP tools and platforms
 
 ### Direct API Integration
 
@@ -158,7 +151,7 @@ Use REST API endpoints for custom healthcare applications:
 
 ### Why Certus Works Everywhere
 
-Certus uses a **universal HTTP-based architecture** with stdio transport bridges, making it compatible with **all major MCP clients** including Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf, and LibreChat.
+Certus uses a universal HTTP-based architecture with stdio transport bridges. This makes it work with all major MCP clients including Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf, and LibreChat.
 
 **Key Advantages:**
 
@@ -172,7 +165,7 @@ Certus uses a **universal HTTP-based architecture** with stdio transport bridges
 
 ### Step 1: Universal Configuration (Recommended)
 
-This configuration works with **all MCP clients** (Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf):
+This works with all MCP clients (Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf):
 
 **Configuration file locations:**
 
@@ -195,7 +188,7 @@ This configuration works with **all MCP clients** (Claude Desktop, VS Code, Curs
 
 ### Step 2: Backup Option (If npx mcp-remote doesn't work)
 
-If the `npx mcp-remote` method doesn't work with your specific MCP client setup, use our stdio wrapper:
+If `npx mcp-remote` doesn't work with your MCP client, use our stdio wrapper:
 
 1. **Download the stdio wrapper**: Get `stdio-wrapper.js` from our repository
 2. **Update your config** to point to the wrapper file:
@@ -558,7 +551,17 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 - Without API Key: 1,000 requests/day
 - With API Key: 120,000 requests/day
-- Intelligent Caching: Reduces API calls through smart result caching
+- **Medical Safety-First Caching**: Smart performance optimization with patient safety priority
+
+#### Current Caching Implementation (Updated July 29, 2025)
+
+- **CACHED Drug Labels**: 24-hour TTL for static prescribing information
+- **CACHED Drug Shortages**: 30-minute TTL for rapidly changing supply data  
+- **CACHED Adverse Events**: 1-hour TTL balancing safety with performance
+- **NOT CACHED Drug Recalls**: NO CACHING - Urgent safety alerts must always be current
+- **NOT CACHED Serious Adverse Events**: NO CACHING - Life-threatening data requires fresh information
+
+**Medical Safety Priority**: Performance optimization never compromises patient safety. Urgent medical safety data (recalls, serious adverse events) bypasses caching to ensure healthcare professionals always receive the most current FDA information.
 
 ## Testing and Debugging
 
@@ -632,13 +635,15 @@ Certus_server/
 
 ## API Endpoints
 
-| Endpoint     | Method | Description                              |
-|--------------|--------|------------------------------------------|
-| `/health`    | GET    | Server health check and status           |
-| `/mcp`       | POST   | MCP JSON-RPC endpoint for tool calls     |
-| `/tools`     | GET    | List all available tools and schemas     |
-| `/robots.txt`| GET    | Web crawler directives (blocks all crawlers) |
-| `/`          | GET    | Server information and documentation     |
+| Endpoint       | Method | Description                              |
+|----------------|--------|------------------------------------------|
+| `/health`      | GET    | Server health check and status           |
+| `/mcp`         | POST   | MCP JSON-RPC endpoint for tool calls     |
+| `/tools`       | GET    | List all available tools and schemas     |
+| `/cache-stats` | GET    | Real-time cache statistics and monitoring |
+| `/cache-cleanup` | POST | Manual cache cleanup with statistics   |
+| `/robots.txt`  | GET    | Web crawler directives (blocks all crawlers) |
+| `/`            | GET    | Server information and documentation     |
 
 ## OpenFDA API Endpoints Used
 
@@ -668,28 +673,36 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - Multiple search strategies for drug name variations (generic, brand, openFDA fields)
 - Automatic fallback search methods when initial queries return no results
 - Handles common misspellings and name variations automatically
-- Search strategy reporting shows which method successfully found results
+- Search strategy reporting shows which method found results
 
-### Comprehensive Data Integration
+### Data Integration
 
 - **FDA Drug Shortages Database:** Real-time shortage information with reasons and estimated resolution
 - **FDA Drug Labels Database:** Complete structured product labeling and prescribing information
 - **FDA Enforcement Database:** Drug recall and safety information with classification details
-- **FDA Adverse Event Reporting System (FAERS):** Comprehensive adverse event and safety data with reaction classifications
+- **FDA Adverse Event Reporting System (FAERS):** Adverse event and safety data with reaction classifications
 
 ### Minimal Processing Architecture
 
 - Raw FDA API responses preserved with minimal post-processing
 - Original openFDA JSON structure maintained for accurate data representation
 - Reduced data transformation overhead for better performance
-- Enhanced for AI analysis with structured but unmodified FDA data
+- Structured but unmodified FDA data for AI analysis
 
 ### Batch Processing
 
-- Analyze up to 25 drugs simultaneously in a single request
+- Analyze up to 25 drugs at once
 - Combined shortage, recall, and optional trend analysis
 - Efficient API usage with intelligent request batching
-- Formulary-wide assessment capabilities
+- Formulary-wide assessment
+
+### Cache Management and Monitoring
+
+- **Real-Time Statistics**: Live cache monitoring with memory usage and entry breakdown
+- **Medical Safety Compliance**: Safety-critical data bypasses caching for patient protection
+- **Automatic Cleanup**: Hourly cache maintenance prevents memory leaks
+- **Manual Control**: Emergency cache clearing via `/cache-cleanup` endpoint
+- **Performance Tracking**: Cache hit/miss logging for optimization insights
 
 ## Troubleshooting
 
@@ -697,8 +710,8 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 
 - **Tool not appearing in Claude:**
   - Restart Claude Desktop completely
-  - Verify config file syntax is correct
-  - Check that the server URL is accessible
+  - Check config file syntax
+  - Make sure the server URL works
 - **Connection errors:**
   - Test server health: `curl https://certus.opensource.mieweb.org/health`
   - Try backup server if main is down
@@ -706,7 +719,7 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - **No results found:**
   - Try different drug name variations (generic vs brand)
   - Check spelling of drug names
-  - Verify drug exists in FDA database
+  - Make sure drug exists in FDA database
 - **Rate limit issues:**
   - Add OpenFDA API key to environment variables
   - Reduce request frequency
@@ -720,6 +733,12 @@ curl https://certus.opensource.mieweb.org/health
 
 # View available tools
 curl https://certus.opensource.mieweb.org/tools
+
+# Check cache statistics and performance
+curl https://certus.opensource.mieweb.org/cache-stats
+
+# Manual cache cleanup (if needed)
+curl -X POST https://certus.opensource.mieweb.org/cache-cleanup
 
 # Test specific tool functionality
 npm run test
@@ -736,7 +755,7 @@ The project includes a comprehensive test suite with 63 test cases covering all 
 - **Coverage**: All 8 FDA drug information tools
 - **Test Categories**: Trend analysis, core tools, batch analysis, performance, error handling
 - **Framework**: Custom assertion-based testing with error tracking
-- **Results**: 63 passed, 0 failed (verified July 15, 2025)
+- **Results**: 63 passed, 0 failed (verified July 29, 2025 with medical safety caching)
 
 ```bash
 # Run the comprehensive test suite
@@ -777,6 +796,9 @@ node tests/comprehensive-test.js
 - **Transport:** HTTP POST (JSON-RPC) with stdio bridge compatibility
 - **Rate Limiting:** FDA API public limits (1,000 requests/day without API key)
 - **Tools Available:** 8 FDA drug information tools
+- **Caching:** Medical safety-first TTL-based caching (3 of 8 tools cached)
+- **Memory Management:** Automatic hourly cleanup with manual override capabilities
+- **Monitoring:** Real-time cache statistics and performance tracking
 - **CORS:** Enabled for cross-origin requests
 
 ## Resources
