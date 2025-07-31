@@ -215,7 +215,7 @@ const TOOL_DEFINITIONS = [
     },
     {
         name: "batch_drug_analysis",
-        description: "Analyze multiple drugs simultaneously. Use when asked to 'compare multiple drugs', 'analyze this list of drugs', or given a list of 2+ medications to analyze.",
+        description: "Analyze multiple drugs simultaneously for shortages, recalls, and optional trends. Use when asked to 'compare multiple drugs', 'analyze this list of drugs', 'check these medications for problems', or given a list of 2+ medications to analyze.",
         inputSchema: {
             type: "object",
             properties: {
