@@ -595,6 +595,36 @@ curl https://certus-server-production.up.railway.app/health
 curl https://certus.opensource.mieweb.org/tools
 ```
 
+### Unit Testing
+
+The project includes comprehensive unit tests that validate both utility functions and live server integration:
+
+```bash
+# Run unit tests against localhost (default)
+npm run test:unit
+
+# Test against your own deployment
+TEST_SERVER_URL=https://your-server.com npm run test:unit
+
+# Test against local development server
+npm run test:unit:local
+
+# Test against production server (maintainer use)
+npm run test:unit:production
+```
+
+The unit tests validate:
+- ✅ Core utility functions (drug name validation, cache management)
+- ✅ Server health and tool availability 
+- ✅ MCP protocol compliance (JSON-RPC 2.0)
+- ✅ Drug information tool execution
+- ✅ Cache statistics and performance monitoring
+
+**For your own deployment testing:**
+1. Deploy the server to your infrastructure
+2. Set `TEST_SERVER_URL` environment variable to your server URL
+3. Run `npm run test:unit` to validate your deployment
+
 ### Direct API Testing
 
 ```bash
