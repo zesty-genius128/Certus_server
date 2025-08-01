@@ -1,15 +1,23 @@
 /**
  * Unit Tests for Certus MCP Server Utility Functions
  * 
- * Tests core utility functions from openfda-client.js
+ * Tests core utility functions from openfda-client.js and validates live server integration.
  * Uses Node.js built-in test runner (Node 18+)
+ * 
+ * Configuration:
+ * - Default: Tests against localhost:443 (for development)
+ * - Custom: Set TEST_SERVER_URL environment variable to test your deployment
+ * 
+ * Examples:
+ * npm run test:unit                                    # Test localhost
+ * TEST_SERVER_URL=https://your-server.com npm test:unit # Test your deployment
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 
-// Test against the live Proxmox server
-const SERVER_URL = 'https://certus.opensource.mieweb.org';
+// Test against configurable server URL - defaults to localhost for development
+const SERVER_URL = process.env.TEST_SERVER_URL || 'http://localhost:443';
 
 // Import the utility functions we want to test
 import {
@@ -291,11 +299,14 @@ describe('Live Server Integration Tests', () => {
         assert.strictEqual(response.ok, true, 'Cache stats endpoint should be accessible');
         
         const data = await response.json();
-        assert(typeof data.totalEntries === 'number', 'Should have totalEntries');
-        assert(typeof data.memoryUsageApprox === 'number', 'Should have memory usage');
-        assert(data.entriesByType, 'Should have entriesByType breakdown');
+        assert(data.cache, 'Should have cache object');
+        assert(typeof data.cache.totalEntries === 'number', 'Should have totalEntries');
+        assert(typeof data.cache.memoryUsageApprox === 'number', 'Should have memory usage');
+        assert(data.cache.entriesByType, 'Should have entriesByType breakdown');
+        assert.strictEqual(data.status, 'active', 'Cache should be active');
     });
 });
 
 console.log('Unit tests loaded successfully. Run with: node --test tests/unit-tests.js');
-console.log(`Testing against live Proxmox server: ${SERVER_URL}`);
+console.log(`Testing against server: ${SERVER_URL}`);
+console.log('To test against a different server, set TEST_SERVER_URL environment variable');
