@@ -291,9 +291,11 @@ describe('Live Server Integration Tests', () => {
         assert.strictEqual(response.ok, true, 'Cache stats endpoint should be accessible');
         
         const data = await response.json();
-        assert(typeof data.totalEntries === 'number', 'Should have totalEntries');
-        assert(typeof data.memoryUsageApprox === 'number', 'Should have memory usage');
-        assert(data.entriesByType, 'Should have entriesByType breakdown');
+        assert(data.cache, 'Should have cache object');
+        assert(typeof data.cache.totalEntries === 'number', 'Should have totalEntries');
+        assert(typeof data.cache.memoryUsageApprox === 'number', 'Should have memory usage');
+        assert(data.cache.entriesByType, 'Should have entriesByType breakdown');
+        assert.strictEqual(data.status, 'active', 'Cache should be active');
     });
 });
 
