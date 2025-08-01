@@ -972,4 +972,12 @@ setInterval(() => {
 }, CLEANUP_INTERVAL);
 
 // Export cache management functions for potential external use
-export { getCacheStats, cleanExpiredCache };
+export { 
+    getCacheStats, 
+    cleanExpiredCache,
+    // Export utility functions for unit testing
+    validateDrugName,
+    normalizeIdentifierType,
+    buildParams,
+    isCacheValid
+};
