@@ -229,8 +229,8 @@ describe('Utility Functions Test Suite', () => {
     });
 });
 
-// Integration tests against live Proxmox server
-describe('Live Server Integration Tests', () => {
+// Integration tests against live server (skip in CI environment)
+describe('Live Server Integration Tests', { skip: process.env.CI === 'true' }, () => {
     test('should connect to Proxmox server health endpoint', async () => {
         const response = await fetch(`${SERVER_URL}/health`);
         assert.strictEqual(response.ok, true, 'Health endpoint should be accessible');
