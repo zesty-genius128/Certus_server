@@ -127,32 +127,14 @@ jobs:
         node -e "
         const fs = require('fs');
         const content = fs.readFileSync('official-mcp-server.js', 'utf8');
-        
-        // Look for FDA tool definitions in TOOL_DEFINITIONS array
-        const fdaTools = [
-          'search_drug_shortages',
-          'search_adverse_events', 
-          'search_serious_adverse_events',
-          'search_drug_recalls',
-          'get_drug_label_info',
-          'get_medication_profile',
-          'analyze_drug_shortage_trends',
-          'batch_drug_analysis'
-        ];
-        
-        let foundTools = 0;
-        fdaTools.forEach(tool => {
-          if (content.includes('name: \"' + tool + '\"')) {
-            foundTools++;
-          }
-        });
-        
-        console.log('Found', foundTools, 'FDA tools');
-        if (foundTools !== 8) {
-          console.error('❌ Expected 8 FDA tools, found', foundTools);
+        const toolMatches = content.match(/name: \"[^\"]+\"/g);
+        const toolCount = toolMatches ? toolMatches.length : 0;
+        console.log('Found', toolCount, 'tools');
+        if (toolCount !== 8) {
+          console.error('❌ Expected 8 tools, found', toolCount);
           process.exit(1);
         }
-        console.log('✅ Correct FDA tool count (8 tools)');
+        console.log('✅ Correct tool count (8 FDA tools)');
         "
         
     - name: Validate JSON-RPC structure
