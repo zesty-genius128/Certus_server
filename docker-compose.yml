@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  certus:
+    image: ghcr.io/zesty-genius128/certus_server:latest
+    container_name: certus-mcp-server
+    ports:
+      - "443:443"
+    environment:
+      # Optional: Add your OpenFDA API key for higher rate limits
+      # - OPENFDA_API_KEY=your-api-key-here
+      - PORT=443
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:443/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+  # Optional: Use different port
+  certus-alt-port:
+    image: ghcr.io/zesty-genius128/certus_server:latest
+    container_name: certus-mcp-server-3000
+    ports:
+      - "3000:443"
+    environment:
+      - PORT=443
+      - NODE_ENV=production
+    restart: unless-stopped
+    profiles:
+      - alt-port
