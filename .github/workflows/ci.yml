@@ -124,7 +124,7 @@ jobs:
     - name: Check MCP tool count
       run: |
         echo "Checking expected tool count..."
-        node -e "
+        cat > check_tools.cjs << 'EOF'
         const fs = require('fs');
         const content = fs.readFileSync('official-mcp-server.js', 'utf8');
         
@@ -133,7 +133,7 @@ jobs:
         const toolDefEnd = content.indexOf('];', toolDefStart);
         
         if (toolDefStart === -1 || toolDefEnd === -1) {
-          console.error('❌ Could not find TOOL_DEFINITIONS array');
+          console.error('Could not find TOOL_DEFINITIONS array');
           process.exit(1);
         }
         
@@ -144,12 +144,14 @@ jobs:
         console.log('Found', fdaToolCount, 'FDA tools in TOOL_DEFINITIONS');
         
         if (fdaToolCount !== 8) {
-          console.error('❌ Expected 8 FDA tools, found', fdaToolCount);
-          console.log('Tools found:', toolMatches.map(m => m.replace(/name: \"|"/g, '')).join(', '));
+          console.error('Expected 8 FDA tools, found', fdaToolCount);
+          console.log('Tools found:', toolMatches.join(', '));
           process.exit(1);
         }
-        console.log('✅ Correct FDA tool count (8 tools)');
-        "
+        console.log('Correct FDA tool count (8 tools)');
+        EOF
+        node check_tools.cjs
+        rm check_tools.cjs
         
     - name: Validate JSON-RPC structure
       run: |
