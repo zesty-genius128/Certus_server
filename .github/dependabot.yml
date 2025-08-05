@@ -1,0 +1,72 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "zesty-genius128"
+    assignees:
+      - "zesty-genius128"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    ignore:
+      # Ignore major Node.js version updates to maintain stability
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Group security updates together
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+      # Group development dependencies
+      dev-dependencies:
+        patterns:
+          - "eslint*"
+          - "prettier*"
+          - "jest*"
+          - "nodemon*"
+        dependency-type: "development"
+      # Group production dependencies by category  
+      http-server:
+        patterns:
+          - "express*"
+          - "cors*"
+          - "body-parser*"
+        dependency-type: "production"
+      utilities:
+        patterns:
+          - "axios*"
+          - "dotenv*"
+        dependency-type: "production"
+
+  # Monitor GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "zesty-genius128"
+    assignees:
+      - "zesty-genius128"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "automated"
