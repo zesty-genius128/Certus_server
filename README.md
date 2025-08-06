@@ -590,6 +590,45 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 **Medical Safety Priority**: We cache data based on how quickly it changes and its safety impact. Drug recalls can happen at any time and serious adverse events involve life-threatening situations - caching this data could mean a doctor sees outdated information during an emergency. So recalls and serious adverse events always get fresh data from the FDA. Drug labels rarely change, so we cache those for 24 hours. Drug shortages change frequently but aren't usually life-threatening emergencies, so we cache them for 30 minutes. Regular adverse events are cached for 1 hour to balance safety with performance.
 
+## Automated CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+**Comprehensive Testing Pipeline:**
+- Multi-Node.js version testing (18.x, 20.x, 22.x)
+- MCP protocol compliance validation (JSON-RPC 2.0)
+- Live server integration testing against production deployment
+- Code quality checks and syntax validation
+- Automated tool availability verification (all 8 FDA tools)
+
+**Docker Build and Distribution:**
+- Multi-platform container builds (AMD64, ARM64)
+- Automated publishing to GitHub Container Registry (ghcr.io)
+- Trivy security scanning with SARIF report generation
+- Container functionality testing and health check validation
+- Production-ready image optimization with Alpine Linux
+
+**Security and Maintenance Automation:**
+- Weekly CodeQL security scans with healthcare-focused analysis
+- Monthly dependency updates via Dependabot with smart grouping
+- Automated security patch management with manual review gates
+- Container vulnerability scanning integrated into build process
+
+### Quality Assurance
+
+**Enterprise-Grade Testing:**
+- 60+ automated test cases covering all FDA drug information tools
+- Performance validation with response time monitoring
+- Error handling verification across all API endpoints
+- Cache behavior testing for medical safety compliance
+- Integration testing with multiple MCP client types
+
+**Deployment Verification:**
+- Automated health checks across all deployed environments
+- Tool availability validation after each deployment
+- MCP protocol compliance testing for client compatibility
+- Performance regression testing to maintain response times
+
 ## Testing and Debugging
 
 ### Test with MCP Inspector
@@ -881,19 +920,38 @@ node tests/comprehensive-test.js
 
 ## Technical Specifications
 
+### Core Architecture
 - **Protocol:** Model Context Protocol (MCP) 2024-11-05
 - **Data Sources:** FDA openFDA APIs (Drug Shortages, Labels, Enforcement, Adverse Events)
 - **Server:** OpenFDA MCP Server v2.0.0
-- **Node.js:** 18+ required
+- **Node.js:** 18+ required (tested on 18.x, 20.x, 22.x)
 - **Dependencies:** Express, CORS, Helmet, Compression, MCP SDK
 - **Response Format:** JSON-RPC 2.0 with raw FDA data
 - **Transport:** HTTP POST (JSON-RPC) with stdio bridge compatibility
-- **Rate Limiting:** FDA API public limits (1,000 requests/day without API key)
+
+### Production Infrastructure
+- **Container Platform:** Docker with multi-platform support (AMD64, ARM64)
+- **Base Image:** Alpine Linux for security and minimal footprint
+- **Security:** Non-root user execution, automated vulnerability scanning
+- **Registry:** GitHub Container Registry (ghcr.io/zesty-genius128/certus_server)
+- **Health Monitoring:** Built-in health checks with auto-restart capabilities
+- **HTTPS:** Full SSL/TLS support with CORS enabled for cross-origin requests
+
+### Performance and Caching
+- **Rate Limiting:** FDA API public limits (1,000 requests/day without API key, 120,000 with key)
 - **Tools Available:** 8 FDA drug information tools
-- **Caching:** Medical safety-first TTL-based caching (3 of 8 tools cached - urgent safety data never cached)
+- **Caching Strategy:** Medical safety-first TTL-based caching (3 of 8 tools cached)
+- **Safety Priority:** Urgent safety data never cached (recalls, serious adverse events)
 - **Memory Management:** Automatic hourly cleanup with manual override capabilities
 - **Monitoring:** Real-time cache statistics and performance tracking
-- **CORS:** Enabled for cross-origin requests
+
+### Quality Assurance
+- **Testing:** 60+ automated test cases with multi-Node.js version validation
+- **Security Scanning:** Weekly CodeQL analysis, container vulnerability scanning
+- **Dependency Management:** Monthly automated updates with security prioritization
+- **CI/CD Pipeline:** Comprehensive GitHub Actions workflows for testing, building, and deployment
+- **MCP Compliance:** Automated JSON-RPC 2.0 protocol validation
+- **Integration Testing:** Live server validation and client compatibility verification
 
 ## Resources
 
