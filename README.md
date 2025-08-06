@@ -723,6 +723,43 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 
 > **Official Documentation:** [FDA openFDA APIs](https://open.fda.gov/apis/)
 
+## Security and Compliance Features
+
+### Automated Security Scanning
+
+**CodeQL Static Analysis:**
+- Weekly automated security scans for vulnerability detection
+- Specialized healthcare application security analysis
+- SQL injection, XSS, and command injection detection
+- Hard-coded credential and sensitive data scanning
+- Results integrated into GitHub Security tab for audit trails
+
+**Container Security:**
+- Multi-platform Docker images with Trivy vulnerability scanning
+- Production-optimized Alpine Linux base for minimal attack surface
+- Non-root user execution for enhanced security
+- Automatic security updates via GitHub Actions
+
+**Dependency Management:**
+- Monthly automated dependency updates via Dependabot
+- Security patches prioritized and grouped for efficient review
+- Major version updates blocked to maintain production stability
+- Smart grouping of related packages for comprehensive testing
+
+### Healthcare Compliance Architecture
+
+**Medical Data Safety:**
+- Safety-critical data (drug recalls, serious adverse events) never cached
+- Fresh FDA data guaranteed for emergency medical situations
+- Raw FDA API responses preserved to maintain regulatory accuracy
+- Appropriate disclaimers and safety warnings included
+
+**Professional Security Attestation:**
+- Comprehensive vulnerability scanning suitable for healthcare environments
+- Multi-layer security coverage (code, container, dependencies)
+- Audit trail maintenance through GitHub Security integration
+- Enterprise-grade security practices for medical data handling
+
 ## Advanced Features
 
 ### Intelligent Drug Matching
