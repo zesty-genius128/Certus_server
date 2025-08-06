@@ -448,10 +448,33 @@ Current FDA API endpoint availability:
 ### Prerequisites
 
 - Node.js 18+
-- Railway account (free) or your own hosting
+- Docker (recommended) or Railway account (free) or your own hosting
 - Git
 
-### Step 1: Clone and Setup
+### Option 1: Docker Deployment (Recommended)
+
+The fastest way to deploy Certus is using our pre-built Docker containers:
+
+```bash
+# Run with Docker
+docker run -d -p 443:443 \
+  --name certus-server \
+  --restart unless-stopped \
+  ghcr.io/zesty-genius128/certus_server:latest
+
+# Or use Docker Compose
+curl -O https://raw.githubusercontent.com/zesty-genius128/Certus_server/main/docker-compose.yml
+docker-compose up -d
+```
+
+**Docker Features:**
+- Multi-platform support (AMD64, ARM64)
+- Automatic security scanning
+- Production-optimized Alpine Linux base
+- Health checks and auto-restart
+- Non-root user for security
+
+### Option 2: Manual Setup
 
 ```bash
 git clone https://github.com/zesty-genius128/Certus_server.git
