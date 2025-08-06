@@ -457,24 +457,127 @@ Current FDA API endpoint availability:
 
 ## Deploy Your Own Server
 
-### Quick Docker Start
+### Prerequisites
+
+- Node.js 18+
+- Docker (recommended) or Railway account (free) or your own hosting
+- Git
+
+### Option 1: Docker Deployment (Recommended)
+
+The fastest way to deploy Certus is using our pre-built Docker containers:
 
 ```bash
+# Run with Docker
 docker run -d -p 443:443 \
   --name certus-server \
   --restart unless-stopped \
   ghcr.io/zesty-genius128/certus_server:latest
+
+# Or use Docker Compose
+curl -O https://raw.githubusercontent.com/zesty-genius128/Certus_server/main/docker-compose.yml
+docker-compose up -d
 ```
 
-Then update your Claude config to use your server URL.
+**Docker Features:**
+- Multi-platform support (AMD64, ARM64)
+- Automatic security scanning
+- Production-optimized Alpine Linux base
+- Health checks and auto-restart
+- Non-root user for security
 
-**For complete deployment guides including Docker, Railway, self-hosted, and configuration options, see our [Deployment Guide](docs/deployment-guide.md).**
+### Option 2: Manual Setup
+
+```bash
+git clone https://github.com/zesty-genius128/Certus_server.git
+cd Certus_server
+npm install
+```
+
+### Step 2: Test Locally
+
+```bash
+# Start the server
+npm start
+
+# Test in another terminal
+curl http://localhost:3000/health
+
+# Test drug search
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "search_drug_shortages",
+      "arguments": {"drug_name": "insulin", "limit": 5}
+    }
+  }'
+```
+
+### Step 3: Deploy to Railway (Backup Option)
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login to Railway
+railway login
+
+# Initialize project
+railway init
+
+# Deploy
+railway up
+
+# Get your URL
+railway domain
+```
+
+### Step 4: Deploy to Your Own Infrastructure
+
+For Proxmox or other self-hosted environments:
+
+```bash
+# Copy files to your server
+scp -r . user@your-server:/path/to/certus-server/
+
+# On your server
+cd /path/to/certus-server
+npm install
+npm start
+
+# For production with PM2
+npm install -g pm2
+pm2 start official-mcp-server.js --name certus-server
+pm2 save
+pm2 startup
+```
+
+### Step 5: Update Claude Config
+
+Replace the URL in your Claude config with your deployed URL:
+
+```json
+{
+  "mcpServers": {
+    "Certus": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://your-server.com:3000/mcp", "--allow-http"]
+    }
+  }
+}
+```
+
+> **Note:** The `--allow-http` flag is only required if you are using an `http` URL. If your server URL starts with `https`, you do not need to include this flag.
 
 ## Configuration
 
-### Basic Setup
+### Environment Variables (Optional)
 
-Get a free FDA API key for higher rate limits:
+Create a `.env` file for enhanced API performance:
 
 ```bash
 OPENFDA_API_KEY=your_fda_api_key_here
@@ -483,7 +586,58 @@ PORT=3000
 
 Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
-**For detailed configuration including environment variables, caching behavior, rate limits, and medical safety settings, see our [Configuration Guide](docs/configuration-guide.md).**
+### Rate Limits
+
+- Without API Key: 1,000 requests/day
+- With API Key: 120,000 requests/day
+- **Medical Safety-First Caching**: Smart performance optimization with patient safety priority
+
+#### Current Caching Implementation (Updated July 29, 2025)
+
+- **CACHED Drug Labels**: 24-hour TTL for static prescribing information
+- **CACHED Drug Shortages**: 30-minute TTL for rapidly changing supply data  
+- **CACHED Adverse Events**: 1-hour TTL balancing safety with performance
+- **NOT CACHED Drug Recalls**: NO CACHING - Urgent safety alerts must always be current
+- **NOT CACHED Serious Adverse Events**: NO CACHING - Life-threatening data requires fresh information
+
+**Medical Safety Priority**: We cache data based on how quickly it changes and its safety impact. Drug recalls can happen at any time and serious adverse events involve life-threatening situations - caching this data could mean a doctor sees outdated information during an emergency. So recalls and serious adverse events always get fresh data from the FDA. Drug labels rarely change, so we cache those for 24 hours. Drug shortages change frequently but aren't usually life-threatening emergencies, so we cache them for 30 minutes. Regular adverse events are cached for 1 hour to balance safety with performance.
+
+## Security and Compliance Features
+
+### Automated Security Scanning
+
+**CodeQL Static Analysis:**
+- Weekly automated security scans for vulnerability detection
+- Specialized healthcare application security analysis
+- SQL injection, XSS, and command injection detection
+- Hard-coded credential and sensitive data scanning
+- Results integrated into GitHub Security tab for audit trails
+
+**Container Security:**
+- Multi-platform Docker images with Trivy vulnerability scanning
+- Production-optimized Alpine Linux base for minimal attack surface
+- Non-root user execution for enhanced security
+- Automatic security updates via GitHub Actions
+
+**Dependency Management:**
+- Monthly automated dependency updates via Dependabot
+- Security patches prioritized and grouped for efficient review
+- Major version updates blocked to maintain production stability
+- Smart grouping of related packages for comprehensive testing
+
+### Healthcare Compliance Architecture
+
+**Medical Data Safety:**
+- Safety-critical data (drug recalls, serious adverse events) never cached
+- Fresh FDA data guaranteed for emergency medical situations
+- Raw FDA API responses preserved to maintain regulatory accuracy
+- Appropriate disclaimers and safety warnings included
+
+**Professional Security Attestation:**
+- Comprehensive vulnerability scanning suitable for healthcare environments
+- Multi-layer security coverage (code, container, dependencies)
+- Audit trail maintenance through GitHub Security integration
+- Enterprise-grade security practices for medical data handling
 
 ## Automated CI/CD Pipeline
 
@@ -526,17 +680,91 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 ## Testing and Debugging
 
-### Quick Health Check
+### Test with MCP Inspector
 
 ```bash
-# Check if server is running
-curl https://certus.opensource.mieweb.org/health
-
-# Test with MCP inspector
+# Test main server
 npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
+
+# Test backup server
+npx @modelcontextprotocol/inspector https://certus-server-production.up.railway.app/mcp
+
+# Test local development
+npx @modelcontextprotocol/inspector http://localhost:3000/mcp
 ```
 
-**For comprehensive testing guides including unit tests, API testing, and deployment validation, see our [Testing and Validation Guide](docs/testing-guide.md).**
+### Health Check Commands
+
+```bash
+# Check main server status
+curl https://certus.opensource.mieweb.org/health
+
+# Check backup server status
+curl https://certus-server-production.up.railway.app/health
+
+# Get available tools
+curl https://certus.opensource.mieweb.org/tools
+```
+
+### Unit Testing
+
+The project includes comprehensive unit tests that validate both utility functions and live server integration:
+
+```bash
+# Run unit tests against localhost (default)
+npm run test:unit
+
+# Test against your own deployment
+TEST_SERVER_URL=https://your-server.com npm run test:unit
+
+# Test against local development server
+npm run test:unit:local
+
+# Test against production server (maintainer use)
+npm run test:unit:production
+```
+
+The unit tests validate:
+- ✅ Core utility functions (drug name validation, cache management)
+- ✅ Server health and tool availability 
+- ✅ MCP protocol compliance (JSON-RPC 2.0)
+- ✅ Drug information tool execution
+- ✅ Cache statistics and performance monitoring
+
+**For your own deployment testing:**
+1. Deploy the server to your infrastructure
+2. Set `TEST_SERVER_URL` environment variable to your server URL
+3. Run `npm run test:unit` to validate your deployment
+
+### Direct API Testing
+
+```bash
+# Test drug shortage search
+curl -X POST https://certus.opensource.mieweb.org/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "search_drug_shortages", 
+      "arguments": {"drug_name": "insulin", "limit": 3}
+    }
+  }'
+
+# Test medication profile
+curl -X POST https://certus.opensource.mieweb.org/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "get_medication_profile",
+      "arguments": {"drug_identifier": "metformin"}
+    }
+  }'
+```
 
 ## Project Structure
 
@@ -583,43 +811,6 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 
 > **Official Documentation:** [FDA openFDA APIs](https://open.fda.gov/apis/)
 
-## Security and Compliance Features
-
-### Automated Security Scanning
-
-**CodeQL Static Analysis:**
-- Weekly automated security scans for vulnerability detection
-- Specialized healthcare application security analysis
-- SQL injection, XSS, and command injection detection
-- Hard-coded credential and sensitive data scanning
-- Results integrated into GitHub Security tab for audit trails
-
-**Container Security:**
-- Multi-platform Docker images with Trivy vulnerability scanning
-- Production-optimized Alpine Linux base for minimal attack surface
-- Non-root user execution for enhanced security
-- Automatic security updates via GitHub Actions
-
-**Dependency Management:**
-- Monthly automated dependency updates via Dependabot
-- Security patches prioritized and grouped for efficient review
-- Major version updates blocked to maintain production stability
-- Smart grouping of related packages for comprehensive testing
-
-### Healthcare Compliance Architecture
-
-**Medical Data Safety:**
-- Safety-critical data (drug recalls, serious adverse events) never cached
-- Fresh FDA data guaranteed for emergency medical situations
-- Raw FDA API responses preserved to maintain regulatory accuracy
-- Appropriate disclaimers and safety warnings included
-
-**Professional Security Attestation:**
-- Comprehensive vulnerability scanning suitable for healthcare environments
-- Multi-layer security coverage (code, container, dependencies)
-- Audit trail maintenance through GitHub Security integration
-- Enterprise-grade security practices for medical data handling
-
 ## Advanced Features
 
 ### Intelligent Drug Matching
@@ -662,19 +853,59 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 
 ### Common Issues
 
-**Tool not appearing in Claude:**
-- Restart Claude Desktop completely
-- Check config file syntax
+- **Tool not appearing in Claude:**
+  - Restart Claude Desktop completely
+  - Check config file syntax
+  - Make sure the server URL works
+- **Connection errors:**
+  - Test server health: `curl https://certus.opensource.mieweb.org/health`
+  - Try backup server if main is down
+  - Check firewall/network connectivity
+- **No results found:**
+  - Try different drug name variations (generic vs brand)
+  - Check spelling of drug names
+  - Make sure drug exists in FDA database
+- **Rate limit issues:**
+  - Add OpenFDA API key to environment variables
+  - Reduce request frequency
+  - Use batch operations for multiple drugs
 
-**Connection errors:**
-- Test server: `curl https://certus.opensource.mieweb.org/health`
-- Try backup server if main is down
+### Debug Commands
 
-**No results found:**
-- Try different drug name variations (generic vs brand)
-- Check spelling of drug names
+```bash
+# Check server status and capabilities
+curl https://certus.opensource.mieweb.org/health
 
-**For detailed troubleshooting including debug commands, performance issues, and comprehensive solutions, see our [Troubleshooting Guide](docs/troubleshooting-guide.md).**
+# View available tools
+curl https://certus.opensource.mieweb.org/tools
+
+# Check cache statistics and performance
+curl https://certus.opensource.mieweb.org/cache-stats
+
+# Manual cache cleanup (if needed)
+curl -X POST https://certus.opensource.mieweb.org/cache-cleanup
+
+# Test specific tool functionality
+npm run test
+
+# MCP protocol testing
+npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
+```
+
+### Comprehensive Test Suite
+
+The project includes a comprehensive test suite with 63 test cases covering all FDA tools:
+
+- **File**: `tests/comprehensive-test.js`
+- **Coverage**: All 8 FDA drug information tools
+- **Test Categories**: Trend analysis, core tools, batch analysis, performance, error handling
+- **Framework**: Custom assertion-based testing with error tracking
+- **Results**: 63 passed, 0 failed (verified July 29, 2025 with medical safety caching)
+
+```bash
+# Run the comprehensive test suite
+node tests/comprehensive-test.js
+```
 
 ## Use Cases
 
@@ -752,5 +983,4 @@ MIT License
 **Backup Server:** <https://certus-server-production.up.railway.app/mcp>  
 **Status:** Production Ready  
 **Protocol:** MCP 2024-11-05  
-**Data Sources:** FDA Drug Shortages, Labels, Enforcement, and Adverse Events
-(FAERS) Databases
+**Data Sources:** FDA Drug Shortages, Labels, Enforcement, and Adverse Events (FAERS) Databases
