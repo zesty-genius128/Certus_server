@@ -457,54 +457,46 @@ Current FDA API endpoint availability:
 
 ## Deploy Your Own Server
 
-### Prerequisites
+### Quick Start with Docker
 
-- Node.js 18+
-- Docker (recommended) or Railway account (free) or your own hosting
-- Git
-
-### Option 1: Docker Deployment (Recommended)
-
-The fastest way to deploy Certus is using our pre-built Docker containers:
+The fastest way to deploy Certus:
 
 ```bash
-# Run with Docker
 docker run -d -p 443:443 \
   --name certus-server \
   --restart unless-stopped \
   ghcr.io/zesty-genius128/certus_server:latest
+```
 
-# Or use Docker Compose
+Then update your Claude config to point to your server URL.
+
+<details>
+<summary>Complete Docker Deployment Guide</summary>
+
+**Prerequisites:**
+- Docker installed on your system
+- Port 443 available (or use different port with `-p 3000:443`)
+
+**Docker Compose Option:**
+```bash
 curl -O https://raw.githubusercontent.com/zesty-genius128/Certus_server/main/docker-compose.yml
 docker-compose up -d
 ```
 
 **Docker Features:**
 - Multi-platform support (AMD64, ARM64)
-- Automatic security scanning
+- Automatic security scanning during build
 - Production-optimized Alpine Linux base
-- Health checks and auto-restart
-- Non-root user for security
+- Built-in health checks and auto-restart
+- Non-root user for enhanced security
 
-### Option 2: Manual Setup
-
+**Test Your Deployment:**
 ```bash
-git clone https://github.com/zesty-genius128/Certus_server.git
-cd Certus_server
-npm install
-```
-
-### Step 2: Test Locally
-
-```bash
-# Start the server
-npm start
-
-# Test in another terminal
-curl http://localhost:3000/health
+# Check health
+curl http://localhost:443/health
 
 # Test drug search
-curl -X POST http://localhost:3000/mcp \
+curl -X POST http://localhost:443/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -517,49 +509,81 @@ curl -X POST http://localhost:3000/mcp \
   }'
 ```
 
-### Step 3: Deploy to Railway (Backup Option)
+</details>
 
+<details>
+<summary>Manual Installation from Source</summary>
+
+**Prerequisites:**
+- Node.js 18+
+- Git
+
+**Setup Steps:**
+```bash
+git clone https://github.com/zesty-genius128/Certus_server.git
+cd Certus_server
+npm install
+npm start
+```
+
+**Test locally:**
+```bash
+curl http://localhost:3000/health
+```
+
+</details>
+
+<details>
+<summary>Railway Cloud Deployment</summary>
+
+**Prerequisites:**
+- Railway account (free tier available)
+- Railway CLI
+
+**Deployment Steps:**
 ```bash
 # Install Railway CLI
 npm install -g @railway/cli
 
-# Login to Railway
+# Login and deploy
 railway login
-
-# Initialize project
 railway init
-
-# Deploy
 railway up
 
-# Get your URL
+# Get your deployment URL
 railway domain
 ```
 
-### Step 4: Deploy to Your Own Infrastructure
+Railway automatically handles the build and deployment process.
 
-For Proxmox or other self-hosted environments:
+</details>
 
+<details>
+<summary>Self-Hosted Server Deployment</summary>
+
+For Proxmox, VPS, or dedicated server deployment:
+
+**Copy files to server:**
 ```bash
-# Copy files to your server
 scp -r . user@your-server:/path/to/certus-server/
+```
 
-# On your server
+**Install and run:**
+```bash
 cd /path/to/certus-server
 npm install
 npm start
+```
 
-# For production with PM2
+**Production setup with PM2:**
+```bash
 npm install -g pm2
 pm2 start official-mcp-server.js --name certus-server
 pm2 save
 pm2 startup
 ```
 
-### Step 5: Update Claude Config
-
-Replace the URL in your Claude config with your deployed URL:
-
+**Update your Claude config:**
 ```json
 {
   "mcpServers": {
@@ -571,7 +595,9 @@ Replace the URL in your Claude config with your deployed URL:
 }
 ```
 
-> **Note:** The `--allow-http` flag is only required if you are using an `http` URL. If your server URL starts with `https`, you do not need to include this flag.
+Note: Use `--allow-http` only for http URLs. HTTPS URLs don't need this flag.
+
+</details>
 
 ## Configuration
 
@@ -643,63 +669,54 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 ## Testing and Debugging
 
-### Test with MCP Inspector
+### Quick Health Check
+
+```bash
+# Check if server is running
+curl https://certus.opensource.mieweb.org/health
+
+# Test with MCP inspector
+npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
+```
+
+<details>
+<summary>Comprehensive Testing Guide</summary>
+
+### Unit Testing
+
+Run the built-in test suite to validate your deployment:
+
+```bash
+# Test against localhost
+npm run test:unit
+
+# Test your own deployment
+TEST_SERVER_URL=https://your-server.com npm run test:unit
+```
+
+The tests validate:
+- Core utility functions (drug validation, cache management)
+- Server health and tool availability
+- MCP protocol compliance (JSON-RPC 2.0)  
+- All 8 FDA drug information tools
+- Cache behavior and performance monitoring
+
+### MCP Inspector Testing
 
 ```bash
 # Test main server
 npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
 
-# Test backup server
+# Test backup server  
 npx @modelcontextprotocol/inspector https://certus-server-production.up.railway.app/mcp
 
 # Test local development
 npx @modelcontextprotocol/inspector http://localhost:3000/mcp
 ```
 
-### Health Check Commands
-
-```bash
-# Check main server status
-curl https://certus.opensource.mieweb.org/health
-
-# Check backup server status
-curl https://certus-server-production.up.railway.app/health
-
-# Get available tools
-curl https://certus.opensource.mieweb.org/tools
-```
-
-### Unit Testing
-
-The project includes comprehensive unit tests that validate both utility functions and live server integration:
-
-```bash
-# Run unit tests against localhost (default)
-npm run test:unit
-
-# Test against your own deployment
-TEST_SERVER_URL=https://your-server.com npm run test:unit
-
-# Test against local development server
-npm run test:unit:local
-
-# Test against production server (maintainer use)
-npm run test:unit:production
-```
-
-The unit tests validate:
-- ✅ Core utility functions (drug name validation, cache management)
-- ✅ Server health and tool availability 
-- ✅ MCP protocol compliance (JSON-RPC 2.0)
-- ✅ Drug information tool execution
-- ✅ Cache statistics and performance monitoring
-
-**For your own deployment testing:**
-1. Deploy the server to your infrastructure
-2. Set `TEST_SERVER_URL` environment variable to your server URL
-3. Run `npm run test:unit` to validate your deployment
-
 ### Direct API Testing
+
+Test individual tools directly:
 
 ```bash
 # Test drug shortage search
@@ -728,6 +745,24 @@ curl -X POST https://certus.opensource.mieweb.org/mcp \
     }
   }'
 ```
+
+### Health Check Commands
+
+```bash
+# Check main server
+curl https://certus.opensource.mieweb.org/health
+
+# Check backup server
+curl https://certus-server-production.up.railway.app/health
+
+# Get available tools
+curl https://certus.opensource.mieweb.org/tools
+
+# Check cache statistics
+curl https://certus.opensource.mieweb.org/cache-stats
+```
+
+</details>
 
 ## Project Structure
 
@@ -853,33 +888,36 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 
 ### Common Issues
 
-- **Tool not appearing in Claude:**
-  - Restart Claude Desktop completely
-  - Check config file syntax
-  - Make sure the server URL works
-- **Connection errors:**
-  - Test server health: `curl https://certus.opensource.mieweb.org/health`
-  - Try backup server if main is down
-  - Check firewall/network connectivity
-- **No results found:**
-  - Try different drug name variations (generic vs brand)
-  - Check spelling of drug names
-  - Make sure drug exists in FDA database
-- **Rate limit issues:**
-  - Add OpenFDA API key to environment variables
-  - Reduce request frequency
-  - Use batch operations for multiple drugs
+**Tool not appearing in Claude:**
+- Restart Claude Desktop completely
+- Check config file syntax  
+- Test the server URL works
+
+**Connection errors:**
+- Test server: `curl https://certus.opensource.mieweb.org/health`
+- Try backup server if main is down
+
+**No results found:**
+- Try different drug name variations (generic vs brand)
+- Check spelling of drug names
+
+**Rate limit issues:**
+- Add OpenFDA API key to environment variables
+- Use batch operations for multiple drugs
+
+<details>
+<summary>Advanced Troubleshooting and Debug Commands</summary>
 
 ### Debug Commands
 
 ```bash
-# Check server status and capabilities
+# Check server status and capabilities  
 curl https://certus.opensource.mieweb.org/health
 
 # View available tools
 curl https://certus.opensource.mieweb.org/tools
 
-# Check cache statistics and performance
+# Check cache performance
 curl https://certus.opensource.mieweb.org/cache-stats
 
 # Manual cache cleanup (if needed)
@@ -892,20 +930,49 @@ npm run test
 npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
 ```
 
+### Network and Connectivity Issues
+
+**Firewall blocking connections:**
+- Check if ports 443/3000 are open
+- Test with different network connection
+- Verify HTTPS/SSL certificate validity
+
+**SSL/Certificate issues:**
+- Try HTTP version for local testing (add `--allow-http` flag)
+- Check certificate expiration dates
+- Verify domain resolution
+
+### Performance Issues
+
+**Slow response times:**
+- Check cache hit rates with `/cache-stats`
+- Monitor network latency to FDA APIs
+- Consider adding OpenFDA API key for higher rate limits
+
+**Memory usage:**
+- Monitor cache size with `/cache-stats`  
+- Use manual cleanup if cache grows large
+- Check for memory leaks in long-running deployments
+
 ### Comprehensive Test Suite
 
-The project includes a comprehensive test suite with 63 test cases covering all FDA tools:
-
-- **File**: `tests/comprehensive-test.js`
-- **Coverage**: All 8 FDA drug information tools
-- **Test Categories**: Trend analysis, core tools, batch analysis, performance, error handling
-- **Framework**: Custom assertion-based testing with error tracking
-- **Results**: 63 passed, 0 failed (verified July 29, 2025 with medical safety caching)
+Run the full test suite to diagnose issues:
 
 ```bash
-# Run the comprehensive test suite
+# Run all tests
 node tests/comprehensive-test.js
+
+# Test specific deployment
+TEST_SERVER_URL=https://your-server.com npm run test:unit
 ```
+
+The test suite includes 63 test cases covering:
+- All 8 FDA drug information tools
+- Trend analysis and batch processing
+- Performance validation and error handling
+- Cache behavior and medical safety compliance
+
+</details>
 
 ## Use Cases
 
