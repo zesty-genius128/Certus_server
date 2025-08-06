@@ -14,6 +14,12 @@ Access real-time FDA drug information through a ChatGPT-like interface. No
 setup required - just visit the link and start asking about drug shortages,
 recalls, and medication information.
 
+### See It in Action
+
+[![Certus LibreChat Demo](https://img.youtube.com/vi/lcSHZZthhp0/maxresdefault.jpg)](https://www.youtube.com/shorts/lcSHZZthhp0)
+
+*Click to watch: Real-time FDA drug information queries in the LibreChat interface*
+
 > **Note:** If your search does not return results right away, try asking the chatbot to check the identifier type again. This is a known limitation of the current chatbot implementation, not a server issue.
 
 ## Key Features for Healthcare Professionals
@@ -162,6 +168,12 @@ Certus uses a universal HTTP-based architecture with stdio transport bridges. Th
 - **Simple Updates** - Server updates are deployed centrally without client-side changes
 
 ## Quick Start - Add to Any MCP Client
+
+### Step-by-Step Video Tutorial
+
+[![How to Add Certus to Claude Desktop](https://img.youtube.com/vi/6CxolTcxH2E/maxresdefault.jpg)](https://www.youtube.com/shorts/6CxolTcxH2E)
+
+*Click to watch: Complete Claude Desktop setup walkthrough*
 
 ### Step 1: Universal Configuration (Recommended)
 
