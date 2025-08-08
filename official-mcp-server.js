@@ -420,7 +420,7 @@ app.post('/mcp', async (req, res) => {
             case "initialize":
                 log.mcp('Initialize request - sending server capabilities');
                 response.result = {
-                    protocolVersion: "2024-11-05",
+                    protocolVersion: "2025-06-18",
                     capabilities: { tools: {} },
                     serverInfo: {
                         name: "OpenFDA Drug Information MCP Server",
