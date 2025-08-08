@@ -4,6 +4,9 @@ Detailed documentation for Certus OpenFDA MCP Server.
 
 ## Quick Navigation
 
+### [API Reference](api-reference.md)
+Complete API documentation for all 8 FDA drug information tools including parameters, examples, and response formats.
+
 ### [Deployment Guide](deployment-guide.md)
 Complete guide for deploying your own Certus server including Docker, Railway, self-hosted, and Proxmox deployment options.
 
@@ -28,7 +31,8 @@ Return to the [main README](../README.md) for:
 ## Getting Started
 
 1. **New users**: Start with the main [README](../README.md)
-2. **Deploying your own**: See [Deployment Guide](deployment-guide.md)
-3. **Testing setup**: Use [Testing Guide](testing-guide.md)
-4. **Having issues**: Check [Troubleshooting Guide](troubleshooting-guide.md)
-5. **Advanced setup**: Refer to [Configuration Guide](configuration-guide.md)
+2. **API developers**: See [API Reference](api-reference.md) 
+3. **Deploying your own**: Use [Deployment Guide](deployment-guide.md)
+4. **Testing setup**: Follow [Testing Guide](testing-guide.md)
+5. **Having issues**: Check [Troubleshooting Guide](troubleshooting-guide.md)
+6. **Advanced setup**: Refer to [Configuration Guide](configuration-guide.md)

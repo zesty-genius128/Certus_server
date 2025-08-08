@@ -313,6 +313,8 @@ graph TB
 
 ## Available Tools
 
+**For complete API documentation with examples and detailed parameter specifications, see our [API Reference Guide](docs/api-reference.md).**
+
 ### Core Drug Information Tools
 
 #### `search_drug_shortages`
