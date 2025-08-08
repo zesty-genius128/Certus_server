@@ -24,6 +24,8 @@ recalls, and medication information.
 
 ## Key Features for Healthcare Professionals
 
+**For clinical workflows, EHR integration, and regulatory compliance guidance, see our [Healthcare Professional Guide](docs/healthcare-guide.md).**
+
 ### Real-Time Drug Shortage Information
 
 - Search the FDA drug shortage database by generic or brand name
