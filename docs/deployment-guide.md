@@ -429,6 +429,7 @@ docker pull ghcr.io/zesty-genius128/certus_server:latest
 ### Common Issues
 
 **Port already in use:**
+
 ```bash
 # Find process using port
 sudo lsof -i :443
@@ -436,12 +437,14 @@ sudo lsof -i :443
 ```
 
 **Permission denied on port 443:**
+
 ```bash
 # Use port 3000 instead, or setup reverse proxy
 # Docker: -p 3000:443
 ```
 
 **Out of memory:**
+
 ```bash
 # Increase container memory
 # Docker: --memory 1g
@@ -449,6 +452,7 @@ sudo lsof -i :443
 ```
 
 **DNS resolution issues:**
+
 ```bash
 # Check DNS
 nslookup your-domain.com

@@ -7,12 +7,14 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 ### Tool Not Appearing in Claude
 
 **Symptoms:**
+
 - Certus tools don't show up in Claude Desktop
 - Claude doesn't recognize the MCP server
 
 **Solutions:**
 
 1. **Complete Claude Desktop restart:**
+
    ```bash
    # Kill all Claude processes
    pkill -f "Claude"
@@ -22,6 +24,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
    ```
 
 2. **Check configuration file syntax:**
+
    ```json
    {
      "mcpServers": {
@@ -34,6 +37,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
    ```
 
 3. **Verify server URL works:**
+
    ```bash
    curl https://certus.opensource.mieweb.org/health
    npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
@@ -50,6 +54,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 ### Connection Errors
 
 **Symptoms:**
+
 - "Failed to connect to server" errors
 - Timeout errors when calling tools
 - Intermittent connection issues
@@ -57,6 +62,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 **Solutions:**
 
 1. **Test server health:**
+
    ```bash
    # Test main server
    curl https://certus.opensource.mieweb.org/health
@@ -66,6 +72,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
    ```
 
 2. **Check network connectivity:**
+
    ```bash
    # Test DNS resolution
    nslookup certus.opensource.mieweb.org
@@ -79,6 +86,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
    ```
 
 3. **Switch to backup server:**
+
    ```json
    {
      "mcpServers": {
@@ -98,6 +106,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 ### No Results Found
 
 **Symptoms:**
+
 - Tools execute but return "No results found"
 - FDA database queries return empty responses
 - Specific drugs not found
@@ -105,6 +114,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 **Solutions:**
 
 1. **Try different drug name variations:**
+
    ```bash
    # Generic vs brand names
    "metformin" instead of "Glucophage"
@@ -118,6 +128,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
    - Avoid abbreviations: "ASA" → "aspirin"
 
 3. **Verify drug exists in FDA database:**
+
    ```bash
    # Test directly against FDA API
    curl "https://api.fda.gov/drug/label.json?search=openfda.generic_name:insulin&limit=1"
@@ -130,6 +141,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 ### Rate Limit Issues
 
 **Symptoms:**
+
 - "Rate limit exceeded" errors
 - Slow or failed requests during heavy usage
 - HTTP 429 responses
@@ -137,13 +149,14 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 **Solutions:**
 
 1. **Add FDA API key:**
+
    ```bash
    # For your own deployment
    export OPENFDA_API_KEY=your_fda_api_key_here
    # Restart server
    ```
-   
-   Get free API key: https://open.fda.gov/apis/authentication/
+
+   Get free API key: <https://open.fda.gov/apis/authentication/>
 
 2. **Reduce request frequency:**
    - Wait between requests
@@ -151,12 +164,14 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
    - Avoid rapid successive queries
 
 3. **Use batch operations:**
+
    ```bash
    # Instead of 5 separate requests, use batch analysis
    "Analyze these drugs: insulin, metformin, lisinopril, aspirin, atorvastatin"
    ```
 
 4. **Monitor rate limits:**
+
    ```bash
    # Check current usage (if you have API key)
    curl -H "X-API-Key: your_key" "https://api.fda.gov/drug/label.json?limit=1"
@@ -166,6 +181,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 ### MCP Protocol Errors
 
 **Symptoms:**
+
 - JSON-RPC errors
 - Protocol version mismatches
 - Invalid request/response format
@@ -173,6 +189,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
 **Solutions:**
 
 1. **Test with MCP Inspector:**
+
    ```bash
    npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp
    ```
@@ -183,6 +200,7 @@ Comprehensive troubleshooting guide for Certus MCP Server issues.
    - Ensure JSON-RPC 2.0 compliance
 
 3. **Test raw JSON-RPC:**
+
    ```bash
    curl -X POST https://certus.opensource.mieweb.org/mcp \
      -H "Content-Type: application/json" \
@@ -262,11 +280,13 @@ curl -I https://certus.opensource.mieweb.org/health
 #### Slow Response Times
 
 **Symptoms:**
+
 - Requests take longer than 10 seconds
 - Timeouts in Claude Desktop
 - Poor user experience
 
 **Diagnosis:**
+
 ```bash
 # Measure response times
 time curl -s https://certus.opensource.mieweb.org/health
@@ -286,12 +306,15 @@ time curl -X POST https://certus.opensource.mieweb.org/mcp \
 ```
 
 **Solutions:**
+
 1. **Check cache hit rates:**
+
    ```bash
    curl -s https://certus.opensource.mieweb.org/cache-stats | jq '.cache'
    ```
 
 2. **Monitor FDA API latency:**
+
    ```bash
    time curl "https://api.fda.gov/drug/label.json?search=openfda.generic_name:metformin&limit=1"
    ```
@@ -307,11 +330,13 @@ time curl -X POST https://certus.opensource.mieweb.org/mcp \
 #### Memory Usage Issues
 
 **Symptoms:**
+
 - Server becomes unresponsive
 - High memory usage alerts
 - Cache growing too large
 
 **Diagnosis:**
+
 ```bash
 # Check cache statistics
 curl -s https://certus.opensource.mieweb.org/cache-stats | jq '.cache.memoryUsageApprox'
@@ -324,7 +349,9 @@ done
 ```
 
 **Solutions:**
+
 1. **Manual cache cleanup:**
+
    ```bash
    curl -X POST https://certus.opensource.mieweb.org/cache-cleanup
    ```
@@ -341,11 +368,13 @@ done
 ### SSL/Certificate Issues
 
 **Symptoms:**
+
 - SSL certificate errors
 - "Insecure connection" warnings
 - HTTPS handshake failures
 
 **Diagnosis:**
+
 ```bash
 # Check certificate details
 openssl s_client -connect certus.opensource.mieweb.org:443 -servername certus.opensource.mieweb.org 2>/dev/null | openssl x509 -noout -dates
@@ -358,7 +387,9 @@ curl -v https://certus.opensource.mieweb.org/health 2>&1 | grep -i certificate
 ```
 
 **Solutions:**
+
 1. **For development/testing (HTTP only):**
+
    ```json
    {
      "mcpServers": {
@@ -371,6 +402,7 @@ curl -v https://certus.opensource.mieweb.org/health 2>&1 | grep -i certificate
    ```
 
 2. **Update system certificates:**
+
    ```bash
    # macOS
    brew install ca-certificates
@@ -388,11 +420,13 @@ curl -v https://certus.opensource.mieweb.org/health 2>&1 | grep -i certificate
 #### Docker Container Issues
 
 **Symptoms:**
+
 - Container won't start
 - Container exits immediately
 - Port binding errors
 
 **Diagnosis:**
+
 ```bash
 # Check container status
 docker ps -a
@@ -405,19 +439,23 @@ sudo lsof -i :443
 ```
 
 **Solutions:**
+
 1. **Port already in use:**
+
    ```bash
    # Use different port
    docker run -d -p 3000:443 --name certus-server ghcr.io/zesty-genius128/certus_server:latest
    ```
 
 2. **Permission denied on port 443:**
+
    ```bash
    # Use unprivileged port
    docker run -d -p 8443:443 --name certus-server ghcr.io/zesty-genius128/certus_server:latest
    ```
 
 3. **Container resource limits:**
+
    ```bash
    # Increase memory limit
    docker run -d -p 443:443 --memory 1g --name certus-server ghcr.io/zesty-genius128/certus_server:latest
@@ -426,11 +464,13 @@ sudo lsof -i :443
 #### Self-Hosted Deployment Issues
 
 **Symptoms:**
+
 - Server won't start
 - Process exits unexpectedly
 - Permission errors
 
 **Diagnosis:**
+
 ```bash
 # Check server logs
 journalctl -u certus-server -f
@@ -443,7 +483,9 @@ cd /opt/certus-server && node official-mcp-server.js
 ```
 
 **Solutions:**
+
 1. **Permission issues:**
+
    ```bash
    # Fix file ownership
    sudo chown -R node:node /opt/certus-server
@@ -455,12 +497,14 @@ cd /opt/certus-server && node official-mcp-server.js
    ```
 
 2. **Node.js path issues:**
+
    ```bash
    # Update service file with full path
    ExecStart=/usr/bin/node /opt/certus-server/official-mcp-server.js
    ```
 
 3. **Port binding issues:**
+
    ```bash
    # Allow non-root user to bind to port 443
    sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/node
@@ -474,33 +518,43 @@ cd /opt/certus-server && node official-mcp-server.js
 ### Common Error Messages and Solutions
 
 #### "Connection refused"
+
 ```
 Error: connect ECONNREFUSED 127.0.0.1:443
 ```
+
 **Solution:** Server is not running. Check deployment status and start server.
 
 #### "Tool not found"
+
 ```
 Tool 'search_drug_shortages' not found
 ```
+
 **Solution:** Server may not be fully initialized. Wait 30 seconds and retry, or check server logs.
 
 #### "Rate limit exceeded"
+
 ```
 HTTP 429: Too Many Requests
 ```
+
 **Solution:** Add FDA API key or reduce request frequency. Wait before retrying.
 
 #### "Invalid JSON-RPC request"
+
 ```
 Invalid request format
 ```
+
 **Solution:** Ensure MCP client is sending proper JSON-RPC 2.0 formatted requests.
 
 #### "SSL handshake failed"
+
 ```
 SSL routines:ssl3_get_server_certificate:certificate verify failed
 ```
+
 **Solution:** Check SSL certificate validity or use HTTP for development testing.
 
 ## Getting Help
@@ -510,21 +564,25 @@ SSL routines:ssl3_get_server_certificate:certificate verify failed
 When reporting issues, collect these logs:
 
 1. **Server health check:**
+
    ```bash
    curl -s https://certus.opensource.mieweb.org/health | jq > health_check.json
    ```
 
 2. **MCP inspector results:**
+
    ```bash
    npx @modelcontextprotocol/inspector https://certus.opensource.mieweb.org/mcp > mcp_inspector.txt 2>&1
    ```
 
 3. **Tool availability:**
+
    ```bash
    curl -s https://certus.opensource.mieweb.org/tools | jq > tools_list.json
    ```
 
 4. **Cache statistics:**
+
    ```bash
    curl -s https://certus.opensource.mieweb.org/cache-stats | jq > cache_stats.json
    ```
@@ -553,9 +611,9 @@ When reporting issues, include:
 
 ### Contact Information
 
-- **GitHub Issues**: https://github.com/zesty-genius128/Certus_server/issues
+- **GitHub Issues**: <https://github.com/zesty-genius128/Certus_server/issues>
 - **Documentation**: Check README.md and other guides in docs/ folder
-- **Server Status**: Monitor https://certus.opensource.mieweb.org/health
+- **Server Status**: Monitor <https://certus.opensource.mieweb.org/health>
 
 ## Preventive Maintenance
 

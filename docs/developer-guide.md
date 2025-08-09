@@ -111,6 +111,7 @@ npm run test:tools
 The central Express.js server implementing the MCP 2024-11-05 specification.
 
 **Key Features:**
+
 - JSON-RPC 2.0 endpoint at `/mcp`
 - Tool schema discovery at `/tools`
 - Health monitoring at `/health`
@@ -118,6 +119,7 @@ The central Express.js server implementing the MCP 2024-11-05 specification.
 - Comprehensive logging system
 
 **Architecture Patterns:**
+
 ```javascript
 // Single source of truth for tool definitions
 const TOOL_DEFINITIONS = [
@@ -144,6 +146,7 @@ async function handleToolCall(name, args) {
 The intelligent API client that handles all FDA database interactions.
 
 **Key Features:**
+
 - Smart caching with medical safety logic
 - Multiple search strategies for drug name variations
 - Comprehensive error handling with helpful messages
@@ -151,6 +154,7 @@ The intelligent API client that handles all FDA database interactions.
 - Performance monitoring and cleanup
 
 **Caching Strategy:**
+
 ```javascript
 const CACHE_TTL = {
     DRUG_LABELS: 24 * 60,      // 24 hours - static data
@@ -161,6 +165,7 @@ const CACHE_TTL = {
 ```
 
 **Search Strategy Pattern:**
+
 ```javascript
 // Multiple search approaches for drug name variations
 const searchStrategies = [
@@ -176,6 +181,7 @@ const searchStrategies = [
 Provides stdio transport compatibility for MCP clients that require local process communication.
 
 **Usage Pattern:**
+
 - Receives JSON-RPC requests via stdin
 - Forwards to HTTP server
 - Returns responses via stdout
@@ -197,6 +203,7 @@ Comprehensive testing infrastructure with multiple test types:
 ### Local Development Setup
 
 1. **Start the Development Server:**
+
    ```bash
    npm run dev
    # Server starts on port 443 with hot reload
@@ -204,6 +211,7 @@ Comprehensive testing infrastructure with multiple test types:
    ```
 
 2. **Test MCP Integration:**
+
    ```bash
    # Test with MCP inspector
    npm run inspect
@@ -213,6 +221,7 @@ Comprehensive testing infrastructure with multiple test types:
    ```
 
 3. **Manual API Testing:**
+
    ```bash
    # Test health endpoint
    curl http://localhost:443/health
@@ -278,6 +287,7 @@ Certus_server/
 ### Coding Conventions
 
 **JavaScript Style:**
+
 ```javascript
 // Use ES6 modules
 import express from 'express';
@@ -302,6 +312,7 @@ const log = {
 ```
 
 **Error Handling Pattern:**
+
 ```javascript
 // Validate inputs first
 function validateDrugName(drugName, context = "drug information") {
@@ -330,6 +341,7 @@ async function searchDrugShortages(drugName, limit = 10) {
 ### Documentation Standards
 
 **JSDoc Comments:**
+
 ```javascript
 /**
  * Search FDA drug shortage database with intelligent fallback strategies
@@ -378,6 +390,7 @@ npm run inspect
 ### Test Examples
 
 **Unit Test Pattern:**
+
 ```javascript
 // tests/unit-tests.js
 import { test, describe } from 'node:test';
@@ -400,6 +413,7 @@ describe('Drug Shortage Search', () => {
 ```
 
 **Integration Test Pattern:**
+
 ```javascript
 // Test MCP protocol compliance
 describe('MCP Protocol Compliance', () => {
@@ -438,6 +452,7 @@ describe('MCP Protocol Compliance', () => {
 ### Example: Adding a New Tool
 
 **Step 1: Tool Definition**
+
 ```javascript
 // In official-mcp-server.js TOOL_DEFINITIONS array
 {
@@ -467,6 +482,7 @@ describe('MCP Protocol Compliance', () => {
 ```
 
 **Step 2: Implementation Function**
+
 ```javascript
 // In openfda-client.js
 /**
@@ -522,6 +538,7 @@ export { searchDrugInteractions };
 ```
 
 **Step 3: Route Handler**
+
 ```javascript
 // In official-mcp-server.js handleToolCall function
 case "search_drug_interactions":
@@ -531,6 +548,7 @@ case "search_drug_interactions":
 ```
 
 **Step 4: Add Tests**
+
 ```javascript
 // In tests/unit-tests.js
 describe('Drug Interactions', () => {
@@ -713,6 +731,7 @@ const cacheStats = {
 ### Optimization Opportunities
 
 **Future Performance Improvements:**
+
 1. **Database Connection Pooling**: For high-traffic scenarios
 2. **Request Batching**: Group multiple drug queries
 3. **CDN Integration**: Cache static responses at edge locations  
@@ -797,6 +816,7 @@ npm run test:security  # If implemented
 ### Production Deployment Architecture
 
 **Current Deployments:**
+
 1. **Primary (Proxmox)**: `certus.opensource.mieweb.org`
 2. **Backup (Railway)**: `certus-server-production.up.railway.app`
 3. **Development**: Local development servers
@@ -804,6 +824,7 @@ npm run test:security  # If implemented
 ### Docker Deployment
 
 **Production Dockerfile:**
+
 ```dockerfile
 FROM node:18-alpine
 WORKDIR /app
@@ -816,6 +837,7 @@ CMD ["node", "official-mcp-server.js"]
 ```
 
 **Docker Commands:**
+
 ```bash
 # Build production image
 docker build -t certus-server .
@@ -841,6 +863,7 @@ docker run -d --name certus-server -p 443:443 ghcr.io/zesty-genius128/certus_ser
 ### Environment-Specific Configuration
 
 **Development:**
+
 ```bash
 NODE_ENV=development
 PORT=443
@@ -848,6 +871,7 @@ OPENFDA_API_KEY=optional_dev_key
 ```
 
 **Production:**
+
 ```bash
 NODE_ENV=production  
 PORT=443
@@ -902,6 +926,7 @@ Fixes #123
 ### Pull Request Guidelines
 
 **PR Title Format:**
+
 - `feat:` - New features
 - `fix:` - Bug fixes  
 - `docs:` - Documentation updates
@@ -910,6 +935,7 @@ Fixes #123
 - `chore:` - Maintenance tasks
 
 **PR Description Template:**
+
 ```markdown
 ## Summary
 Brief description of changes and motivation.
@@ -935,6 +961,7 @@ List any breaking changes or migration notes.
 ### Code Review Process
 
 **Review Checklist:**
+
 1. Code follows established patterns
 2. Tests provide adequate coverage
 3. Documentation is updated
@@ -958,6 +985,7 @@ List any breaking changes or migration notes.
 ### Custom MCP Client Integration
 
 **Building a Custom Client:**
+
 ```javascript
 // Example custom MCP client
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -985,6 +1013,7 @@ console.log(result);
 ### Extending FDA Database Coverage
 
 **Adding New FDA Endpoints:**
+
 1. Research FDA openFDA API documentation
 2. Add endpoint to `ENDPOINTS` constant
 3. Implement search strategies for new data structure
@@ -1015,6 +1044,7 @@ const metrics = {
 ### Integration with Other Systems
 
 **EHR Integration Example:**
+
 ```javascript
 // Example webhook for EHR integration
 app.post('/webhook/drug-shortage-alert', async (req, res) => {
@@ -1043,6 +1073,7 @@ app.post('/webhook/drug-shortage-alert', async (req, res) => {
 ### Common Development Issues
 
 **Port Already in Use:**
+
 ```bash
 # Find process using port 443
 sudo lsof -i :443
@@ -1055,6 +1086,7 @@ PORT=3000 npm run dev
 ```
 
 **FDA API Rate Limits:**
+
 ```bash
 # Check current usage
 curl -I "https://api.fda.gov/drug/label.json?search=generic_name:aspirin&limit=1"
@@ -1065,6 +1097,7 @@ curl -I "https://api.fda.gov/drug/label.json?search=generic_name:aspirin&limit=1
 ```
 
 **MCP Client Connection Issues:**
+
 ```bash
 # Test server directly
 curl http://localhost:443/health
@@ -1081,18 +1114,21 @@ echo '{"jsonrpc":"2.0","id":1,"method":"ping"}' | node stdio-wrapper.js
 ### Debugging Techniques
 
 **Enable Verbose Logging:**
+
 ```bash
 DEBUG=* npm run dev
 NODE_ENV=development npm start
 ```
 
 **Memory Leak Detection:**
+
 ```bash
 node --inspect official-mcp-server.js
 # Open Chrome DevTools for memory profiling
 ```
 
 **Network Debugging:**
+
 ```bash
 # Monitor HTTP requests
 tcpdump -i any -s 0 -A port 443
@@ -1148,6 +1184,7 @@ tcpdump -i any -s 0 -A port 443
 ### Long-term Roadmap
 
 **Planned Improvements:**
+
 1. GraphQL API support
 2. WebSocket real-time updates
 3. Advanced analytics dashboard
