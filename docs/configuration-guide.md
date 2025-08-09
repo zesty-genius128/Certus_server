@@ -22,6 +22,7 @@ LOG_FILE=/var/log/certus-server.log
 ### FDA API Key Setup
 
 **Why you need an API key:**
+
 - Without key: 1,000 requests/day
 - With key: 120,000 requests/day
 - Reduces rate limiting issues
@@ -29,7 +30,7 @@ LOG_FILE=/var/log/certus-server.log
 
 **Getting an API key:**
 
-1. Visit: https://open.fda.gov/apis/authentication/
+1. Visit: <https://open.fda.gov/apis/authentication/>
 2. Click "Get API Key"
 3. Fill out the registration form
 4. Verify your email address
@@ -55,6 +56,7 @@ environment:
 ### Port Configuration
 
 **Default ports:**
+
 - Development: 3000
 - Production: 443 (HTTPS) or 80 (HTTP)
 
@@ -98,11 +100,13 @@ LOG_FORMAT=simple
 ### FDA API Rate Limits
 
 **Without API key:**
+
 - 1,000 requests per day
 - 40 requests per minute (burst)
 - Resets at midnight EST
 
 **With API key:**
+
 - 120,000 requests per day  
 - 240 requests per minute (sustained)
 - Better burst capacity
@@ -129,11 +133,13 @@ Caching behavior is designed around medical data safety and cannot be modified v
 ### Current Caching Implementation
 
 **Cached Data Types:**
+
 - **Drug Labels**: 24-hour TTL (static prescribing information)
 - **Drug Shortages**: 30-minute TTL (rapidly changing supply data)
 - **Adverse Events**: 1-hour TTL (balancing safety with performance)
 
 **Never Cached (Always Fresh):**
+
 - **Drug Recalls**: Urgent safety alerts must always be current
 - **Serious Adverse Events**: Life-threatening data requires immediate freshness
 
@@ -150,6 +156,7 @@ We cache data based on how quickly it changes and its safety impact:
 ### Cache Management
 
 **Automatic cleanup:**
+
 - Runs every hour
 - Removes expired entries
 - Prevents memory leaks
@@ -245,12 +252,14 @@ const corsOptions = {
 ### API Security
 
 **API key security:**
+
 - Store API keys in environment variables (never in code)
 - Use different keys for development/production
 - Rotate keys periodically
 - Monitor key usage
 
 **Server security:**
+
 - Run as non-root user
 - Use HTTPS in production
 - Keep dependencies updated
@@ -277,11 +286,13 @@ const mcpConfig = {
 ### Transport Configuration
 
 **HTTP Transport (default):**
+
 - JSON-RPC 2.0 over HTTP POST
 - Endpoint: `/mcp`
 - Content-Type: `application/json`
 
 **Stdio Bridge Compatibility:**
+
 - Works with `npx mcp-remote`
 - Compatible with all MCP clients
 - Automatic protocol translation
@@ -304,11 +315,13 @@ The server provides 8 FDA drug information tools:
 ### Tool Limits and Defaults
 
 **Search result limits:**
+
 - Default: 5-10 results per tool
 - Maximum: 50 results per tool
 - Batch analysis: Up to 25 drugs
 
 **Timeout configuration:**
+
 - FDA API requests: 15 seconds
 - Tool execution: 30 seconds
 - Total request: 60 seconds
@@ -316,6 +329,7 @@ The server provides 8 FDA drug information tools:
 ### Error Handling Configuration
 
 **Built-in error handling:**
+
 - Automatic retry for transient failures
 - Graceful fallback for API errors
 - User-friendly error messages
@@ -537,6 +551,7 @@ nodemon --watch "*.js" --ignore node_modules/ official-mcp-server.js
 ### Health Check Configuration
 
 **Built-in health endpoint:**
+
 - URL: `/health`
 - Method: GET
 - Response: JSON with server status
@@ -602,6 +617,7 @@ console.log('Configuration:', JSON.stringify(config, null, 2));
 ### Common Configuration Problems
 
 **Environment variables not loaded:**
+
 ```bash
 # Check if .env file is in correct location
 ls -la .env
@@ -611,6 +627,7 @@ node -e "require('dotenv').config(); console.log(process.env.OPENFDA_API_KEY);"
 ```
 
 **Port binding issues:**
+
 ```bash
 # Check if port is available
 netstat -tulpn | grep :443
@@ -620,6 +637,7 @@ sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/node
 ```
 
 **SSL certificate issues:**
+
 ```bash
 # Validate certificate files
 openssl x509 -in certificate.crt -text -noout

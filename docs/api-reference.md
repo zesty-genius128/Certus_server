@@ -13,19 +13,23 @@ The Certus MCP Server provides 8 specialized tools for accessing FDA drug inform
 ## Tool Categories
 
 ### Drug Safety & Shortage Information
+
 - [`search_drug_shortages`](#search_drug_shortages) - Current FDA drug shortage database
 - [`analyze_drug_shortage_trends`](#analyze_drug_shortage_trends) - Historical shortage pattern analysis
 
 ### Adverse Events & Safety Alerts
+
 - [`search_adverse_events`](#search_adverse_events) - FDA adverse event reports (FAERS)
 - [`search_serious_adverse_events`](#search_serious_adverse_events) - Serious adverse events only
 - [`search_drug_recalls`](#search_drug_recalls) - FDA enforcement and recall database
 
 ### Drug Information & Labels
+
 - [`get_drug_label_info`](#get_drug_label_info) - FDA structured product labeling
 - [`get_medication_profile`](#get_medication_profile) - Combined label and shortage data
 
 ### Batch Analysis
+
 - [`batch_drug_analysis`](#batch_drug_analysis) - Multi-drug analysis (up to 25 drugs)
 
 ---
@@ -37,6 +41,7 @@ The Certus MCP Server provides 8 specialized tools for accessing FDA drug inform
 Search the FDA drug shortage database for current and resolved shortages.
 
 **Use Cases:**
+
 - "Check if insulin is in shortage"
 - "Search for metformin shortages"
 - "What drugs are currently in shortage?"
@@ -49,6 +54,7 @@ Search the FDA drug shortage database for current and resolved shortages.
 | `limit` | integer | ❌ | 10 | Maximum results to return (1-50) |
 
 **Example Request:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -65,6 +71,7 @@ Search the FDA drug shortage database for current and resolved shortages.
 ```
 
 **Example Response:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -87,6 +94,7 @@ Search the FDA drug shortage database for current and resolved shortages.
 Search FDA Adverse Event Reporting System (FAERS) for reported side effects and reactions.
 
 **Use Cases:**
+
 - "What are the side effects of aspirin?"
 - "Show adverse events for warfarin"
 - "FDA safety reports for metformin"
@@ -100,6 +108,7 @@ Search FDA Adverse Event Reporting System (FAERS) for reported side effects and 
 | `detailed` | boolean | ❌ | false | Return full raw FDA data (true) or summarized (false) |
 
 **Example Request:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -123,6 +132,7 @@ Search FDA Adverse Event Reporting System (FAERS) for reported side effects and 
 Search serious adverse events only (death, hospitalization, disability).
 
 **Use Cases:**
+
 - "Show serious side effects of warfarin"
 - "Fatal events reported for acetaminophen"
 - "Hospitalizations from ibuprofen"
@@ -144,6 +154,7 @@ Search serious adverse events only (death, hospitalization, disability).
 Search the FDA enforcement database for drug recalls and safety alerts.
 
 **Use Cases:**
+
 - "Has metformin been recalled?"
 - "Search for insulin recalls"
 - "Show recent drug safety alerts"
@@ -164,6 +175,7 @@ Search the FDA enforcement database for drug recalls and safety alerts.
 Retrieve FDA-approved prescribing information and structured product labeling.
 
 **Use Cases:**
+
 - "Get FDA label for metformin"
 - "Show prescribing information for lisinopril"
 - "What are the approved indications for aspirin?"
@@ -176,6 +188,7 @@ Retrieve FDA-approved prescribing information and structured product labeling.
 | `identifier_type` | string | ❌ | "openfda.generic_name" | Type of identifier to use |
 
 **Identifier Types:**
+
 - `openfda.generic_name` - OpenFDA generic name field
 - `openfda.brand_name` - OpenFDA brand name field  
 - `generic_name` - Direct generic name search
@@ -188,6 +201,7 @@ Retrieve FDA-approved prescribing information and structured product labeling.
 Get combined medication overview with both FDA label data and current shortage status.
 
 **Use Cases:**
+
 - "Complete information about metformin"
 - "Full profile for insulin including shortages"
 - "Everything about lisinopril"
@@ -208,6 +222,7 @@ Get combined medication overview with both FDA label data and current shortage s
 Analyze historical FDA drug shortage patterns over specified time periods.
 
 **Use Cases:**
+
 - "Shortage trends for insulin over 12 months"
 - "Historical shortage patterns for metformin"
 - "Analyze shortage frequency for aspirin"
@@ -220,6 +235,7 @@ Analyze historical FDA drug shortage patterns over specified time periods.
 | `months_back` | integer | ❌ | 12 | Number of months to analyze (1-60) |
 
 **Analysis Output:**
+
 - Total shortage events found
 - Total duration in days
 - Average shortage length
@@ -233,6 +249,7 @@ Analyze historical FDA drug shortage patterns over specified time periods.
 Analyze multiple drugs simultaneously for shortages, recalls, and optional trend analysis.
 
 **Use Cases:**
+
 - "Analyze these drugs: insulin, metformin, lisinopril"
 - "Check multiple diabetes medications for problems"
 - "Batch analysis of cardiovascular drugs with trends"
@@ -245,6 +262,7 @@ Analyze multiple drugs simultaneously for shortages, recalls, and optional trend
 | `include_trends` | boolean | ❌ | false | Include trend analysis for each drug |
 
 **Example Request:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -295,6 +313,7 @@ All tools return responses in the standard MCP format:
 ```
 
 **Common Error Codes:**
+
 - `-32601`: Method not found
 - `-32602`: Invalid parameters
 - `-32603`: Internal error (FDA API issues, network problems)
@@ -304,14 +323,16 @@ All tools return responses in the standard MCP format:
 ## Rate Limits
 
 **Without FDA API Key:**
+
 - 1,000 requests per day
 - 40 requests per minute (burst)
 
 **With FDA API Key:**
+
 - 120,000 requests per day
 - 240 requests per minute (sustained)
 
-Get a free FDA API key at: https://open.fda.gov/apis/authentication/
+Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 
 ---
 
@@ -327,6 +348,7 @@ All tools connect to official FDA openFDA APIs:
 | Adverse Events | FDA Adverse Event Reporting System (FAERS) | `/drug/event.json` |
 
 **Data Freshness:**
+
 - **Always Fresh** (never cached): Drug recalls, serious adverse events
 - **Cached** (with TTL): Drug labels (24h), drug shortages (30min), adverse events (1h)
 
@@ -385,6 +407,7 @@ For comprehensive testing procedures, see the [Testing Guide](testing-guide.md).
 ### MCP Client Integration
 
 **Claude Desktop Configuration:**
+
 ```json
 {
   "mcpServers": {
@@ -397,6 +420,7 @@ For comprehensive testing procedures, see the [Testing Guide](testing-guide.md).
 ```
 
 **LibreChat Configuration:**
+
 ```yaml
 mcpServers:
   Certus:

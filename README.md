@@ -494,6 +494,7 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 ### GitHub Actions Workflows
 
 **Comprehensive Testing Pipeline:**
+
 - Multi-Node.js version testing (18.x, 20.x, 22.x)
 - MCP protocol compliance validation (JSON-RPC 2.0)
 - Live server integration testing against production deployment
@@ -501,6 +502,7 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 - Automated tool availability verification (all 8 FDA tools)
 
 **Docker Build and Distribution:**
+
 - Multi-platform container builds (AMD64, ARM64)
 - Automated publishing to GitHub Container Registry (ghcr.io)
 - Trivy security scanning with SARIF report generation
@@ -508,6 +510,7 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 - Production-ready image optimization with Alpine Linux
 
 **Security and Maintenance Automation:**
+
 - Weekly CodeQL security scans with healthcare-focused analysis
 - Monthly dependency updates via Dependabot with smart grouping
 - Automated security patch management with manual review gates
@@ -516,6 +519,7 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 ### Quality Assurance
 
 **Enterprise-Grade Testing:**
+
 - 60+ automated test cases covering all FDA drug information tools
 - Performance validation with response time monitoring
 - Error handling verification across all API endpoints
@@ -523,6 +527,7 @@ Get a free FDA API key at: <https://open.fda.gov/apis/authentication/>
 - Integration testing with multiple MCP client types
 
 **Deployment Verification:**
+
 - Automated health checks across all deployed environments
 - Tool availability validation after each deployment
 - MCP protocol compliance testing for client compatibility
@@ -592,6 +597,7 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 ### Automated Security Scanning
 
 **CodeQL Static Analysis:**
+
 - Weekly automated security scans for vulnerability detection
 - Specialized healthcare application security analysis
 - SQL injection, XSS, and command injection detection
@@ -599,12 +605,14 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - Results integrated into GitHub Security tab for audit trails
 
 **Container Security:**
+
 - Multi-platform Docker images with Trivy vulnerability scanning
 - Production-optimized Alpine Linux base for minimal attack surface
 - Non-root user execution for enhanced security
 - Automatic security updates via GitHub Actions
 
 **Dependency Management:**
+
 - Monthly automated dependency updates via Dependabot
 - Security patches prioritized and grouped for efficient review
 - Major version updates blocked to maintain production stability
@@ -613,12 +621,14 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 ### Healthcare Compliance Architecture
 
 **Medical Data Safety:**
+
 - Safety-critical data (drug recalls, serious adverse events) never cached
 - Fresh FDA data guaranteed for emergency medical situations
 - Raw FDA API responses preserved to maintain regulatory accuracy
 - Appropriate disclaimers and safety warnings included
 
 **Professional Security Attestation:**
+
 - Comprehensive vulnerability scanning suitable for healthcare environments
 - Multi-layer security coverage (code, container, dependencies)
 - Audit trail maintenance through GitHub Security integration
@@ -667,14 +677,17 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 ### Common Issues
 
 **Tool not appearing in Claude:**
+
 - Restart Claude Desktop completely
 - Check config file syntax
 
 **Connection errors:**
+
 - Test server: `curl https://certus.opensource.mieweb.org/health`
 - Try backup server if main is down
 
 **No results found:**
+
 - Try different drug name variations (generic vs brand)
 - Check spelling of drug names
 
@@ -706,6 +719,7 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 ## Technical Specifications
 
 ### Core Architecture
+
 - **Protocol:** Model Context Protocol (MCP) 2024-11-05
 - **Data Sources:** FDA openFDA APIs (Drug Shortages, Labels, Enforcement, Adverse Events)
 - **Server:** OpenFDA MCP Server v2.0.0
@@ -715,6 +729,7 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - **Transport:** HTTP POST (JSON-RPC) with stdio bridge compatibility
 
 ### Production Infrastructure
+
 - **Container Platform:** Docker with multi-platform support (AMD64, ARM64)
 - **Base Image:** Alpine Linux for security and minimal footprint
 - **Security:** Non-root user execution, automated vulnerability scanning
@@ -723,6 +738,7 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - **HTTPS:** Full SSL/TLS support with CORS enabled for cross-origin requests
 
 ### Performance and Caching
+
 - **Rate Limiting:** FDA API public limits (1,000 requests/day without API key, 120,000 with key)
 - **Tools Available:** 8 FDA drug information tools
 - **Caching Strategy:** Medical safety-first TTL-based caching (3 of 8 tools cached)
@@ -731,6 +747,7 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - **Monitoring:** Real-time cache statistics and performance tracking
 
 ### Quality Assurance
+
 - **Testing:** 60+ automated test cases with multi-Node.js version validation
 - **Security Scanning:** Weekly CodeQL analysis, container vulnerability scanning
 - **Dependency Management:** Monthly automated updates with security prioritization

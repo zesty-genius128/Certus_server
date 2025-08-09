@@ -88,12 +88,14 @@ npm run test:unit:production
 The unit tests validate:
 
 **Core Utility Functions:**
+
 - Drug name validation with context-specific error messages
 - Cache management (TTL validation, expired item handling)
 - API parameter building (URL encoding, API key inclusion)
 - Function imports and exports
 
 **Live Server Integration:**
+
 - Server health and availability
 - Tool listing and schema validation
 - MCP protocol compliance (JSON-RPC 2.0)
@@ -101,6 +103,7 @@ The unit tests validate:
 - Cache statistics and performance monitoring
 
 **Medical Safety Compliance:**
+
 - Caching behavior for safety-critical vs non-critical data
 - TTL validation for different data types
 - Cache cleanup functionality
@@ -135,6 +138,7 @@ For testing your own deployment:
 3. Run `npm run test:unit` to validate
 
 Example:
+
 ```bash
 export TEST_SERVER_URL=https://my-server.example.com
 npm run test:unit
@@ -280,6 +284,7 @@ curl https://certus-server-production.up.railway.app/health
 ```
 
 Expected health response:
+
 ```json
 {
   "status": "healthy",
@@ -304,6 +309,7 @@ curl -s https://certus.opensource.mieweb.org/tools | jq '.tools[].name'
 ```
 
 Expected tools list:
+
 ```
 "search_drug_shortages"
 "get_medication_profile"
@@ -326,6 +332,7 @@ watch -n 30 'curl -s https://certus.opensource.mieweb.org/cache-stats | jq'
 ```
 
 Expected cache stats:
+
 ```json
 {
   "timestamp": "2025-08-06T12:00:00.000Z",
@@ -409,28 +416,33 @@ TEST_SERVER_URL=https://your-server.com node tests/comprehensive-test.js
 ### Test Categories
 
 **Drug Trend Analysis Tests:**
+
 - Drugs with shortage history
 - Drugs without shortage history
 - Input validation and error handling
 - Edge cases and boundary conditions
 
 **Core FDA Tools Tests:**
+
 - All 8 FDA drug information tools
 - Parameter validation
 - Response format verification
 - Error handling validation
 
 **Batch Analysis Tests:**
+
 - Multi-drug processing
 - Trend inclusion options
 - Large batch handling (up to 25 drugs)
 
 **Performance Tests:**
+
 - Response time validation (under 5 seconds)
 - Cache behavior verification
 - Memory usage monitoring
 
 **Error Handling Tests:**
+
 - Invalid drug names
 - Malformed requests
 - Rate limit handling
@@ -467,27 +479,32 @@ Total execution time: 45.2 seconds
 After deploying your own server, validate:
 
 1. **Health endpoint responds:**
+
    ```bash
    curl https://your-server.com/health
    ```
 
 2. **All 8 tools available:**
+
    ```bash
    curl https://your-server.com/tools | jq '.tools | length'
    # Should return: 8
    ```
 
 3. **MCP protocol compliance:**
+
    ```bash
    npx @modelcontextprotocol/inspector https://your-server.com/mcp
    ```
 
 4. **Tool functionality:**
+
    ```bash
    TEST_SERVER_URL=https://your-server.com npm run test:unit
    ```
 
 5. **SSL/HTTPS working:**
+
    ```bash
    curl -I https://your-server.com/health
    # Should show HTTP/2 200 or HTTP/1.1 200
@@ -584,22 +601,26 @@ docker stats certus-server --no-stream >> memory_usage.log
 ### Common Test Issues
 
 **Connection timeouts:**
+
 - Check server is running: `curl https://your-server.com/health`
 - Verify network connectivity
 - Check firewall settings
 
 **Tool count mismatch:**
+
 - Verify all 8 tools are properly loaded
 - Check server logs for startup errors
 - Validate tool definitions in code
 
 **MCP protocol errors:**
+
 - Use MCP inspector for detailed diagnostics
 - Check JSON-RPC 2.0 compliance
 - Verify request/response format
 
 **FDA API errors:**
-- Check FDA API status: https://open.fda.gov/apis/status/
+
+- Check FDA API status: <https://open.fda.gov/apis/status/>
 - Verify API key configuration
 - Monitor rate limiting
 
