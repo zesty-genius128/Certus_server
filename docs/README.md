@@ -22,6 +22,9 @@ Detailed troubleshooting guide covering common issues, debug commands, performan
 ### [Configuration Guide](configuration-guide.md)
 Complete configuration reference including environment variables, caching behavior, security settings, and production deployment.
 
+### [Developer Contributing Guide](developer-guide.md)
+Comprehensive guide for developers who want to contribute to, extend, or understand the Certus codebase architecture.
+
 ## Main Documentation
 
 Return to the [main README](../README.md) for:
@@ -36,7 +39,8 @@ Return to the [main README](../README.md) for:
 1. **New users**: Start with the main [README](../README.md)
 2. **Healthcare professionals**: See [Healthcare Professional Guide](healthcare-guide.md)
 3. **API developers**: Use [API Reference](api-reference.md) 
-4. **Deploying your own**: Follow [Deployment Guide](deployment-guide.md)
-5. **Testing setup**: Use [Testing Guide](testing-guide.md)
-6. **Having issues**: Check [Troubleshooting Guide](troubleshooting-guide.md)
-7. **Advanced setup**: Refer to [Configuration Guide](configuration-guide.md)
+4. **Contributing developers**: Read [Developer Contributing Guide](developer-guide.md)
+5. **Deploying your own**: Follow [Deployment Guide](deployment-guide.md)
+6. **Testing setup**: Use [Testing Guide](testing-guide.md)
+7. **Having issues**: Check [Troubleshooting Guide](troubleshooting-guide.md)
+8. **Advanced setup**: Refer to [Configuration Guide](configuration-guide.md)
