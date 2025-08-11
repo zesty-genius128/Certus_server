@@ -32,6 +32,10 @@ Complete configuration reference including environment variables, caching behavi
 
 Comprehensive guide for developers who want to contribute to, extend, or understand the Certus codebase architecture.
 
+### [Performance and Monitoring Guide](performance-monitoring-guide.md)
+
+Complete guide for monitoring, optimizing, and troubleshooting Certus server performance in production environments.
+
 ## Main Documentation
 
 Return to the [main README](../README.md) for:
@@ -48,7 +52,8 @@ Return to the [main README](../README.md) for:
 2. **Healthcare professionals**: See [Healthcare Professional Guide](healthcare-guide.md)
 3. **API developers**: Use [API Reference](api-reference.md)
 4. **Contributing developers**: Read [Developer Contributing Guide](developer-guide.md)
-5. **Deploying your own**: Follow [Deployment Guide](deployment-guide.md)
-6. **Testing setup**: Use [Testing Guide](testing-guide.md)
-7. **Having issues**: Check [Troubleshooting Guide](troubleshooting-guide.md)
-8. **Advanced setup**: Refer to [Configuration Guide](configuration-guide.md)
+5. **Production operators**: See [Performance and Monitoring Guide](performance-monitoring-guide.md)
+6. **Deploying your own**: Follow [Deployment Guide](deployment-guide.md)
+7. **Testing setup**: Use [Testing Guide](testing-guide.md)
+8. **Having issues**: Check [Troubleshooting Guide](troubleshooting-guide.md)
+9. **Advanced setup**: Refer to [Configuration Guide](configuration-guide.md)
