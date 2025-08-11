@@ -260,6 +260,60 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 /**
+ * Simple rate limiting middleware to prevent abuse
+ * Tracks requests per IP address with a reasonable limit for FDA API usage
+ */
+const rateLimit = new Map();
+const RATE_LIMIT = {
+    WINDOW_MS: 60 * 60 * 1000,  // 1 hour window
+    MAX_REQUESTS: 100           // 100 requests per hour per IP
+};
+
+app.use((req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const now = Date.now();
+    const windowStart = now - RATE_LIMIT.WINDOW_MS;
+    
+    // Get or create rate limit data for this IP
+    if (!rateLimit.has(clientIP)) {
+        rateLimit.set(clientIP, []);
+    }
+    
+    const requests = rateLimit.get(clientIP);
+    
+    // Remove expired requests from the window
+    const validRequests = requests.filter(timestamp => timestamp > windowStart);
+    
+    // Check if limit exceeded
+    if (validRequests.length >= RATE_LIMIT.MAX_REQUESTS) {
+        log.warn('rate-limit', `Rate limit exceeded for IP: ${clientIP}`);
+        return res.status(429).json({
+            error: 'Rate limit exceeded',
+            message: `Too many requests. Limit: ${RATE_LIMIT.MAX_REQUESTS} requests per hour.`,
+            retryAfter: Math.ceil((validRequests[0] + RATE_LIMIT.WINDOW_MS - now) / 1000)
+        });
+    }
+    
+    // Add current request timestamp
+    validRequests.push(now);
+    rateLimit.set(clientIP, validRequests);
+    
+    // Clean up old entries periodically (every 100 requests)
+    if (Math.random() < 0.01) {
+        for (const [ip, timestamps] of rateLimit.entries()) {
+            const validTimestamps = timestamps.filter(t => t > windowStart);
+            if (validTimestamps.length === 0) {
+                rateLimit.delete(ip);
+            } else {
+                rateLimit.set(ip, validTimestamps);
+            }
+        }
+    }
+    
+    next();
+});
+
+/**
  * Health check endpoint for monitoring and uptime verification
  * @route GET /health
  * @returns {Object} Server health status and API connectivity
