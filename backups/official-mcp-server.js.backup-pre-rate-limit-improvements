@@ -264,10 +264,9 @@ app.use(express.json({ limit: '10mb' }));
  * Tracks requests per IP address with a reasonable limit for FDA API usage
  */
 const rateLimit = new Map();
-const rateLimitViolations = new Set(); // Track IPs that have been logged this window
 const RATE_LIMIT = {
-    WINDOW_MS: 30 * 60 * 1000,  // 30 minute window
-    MAX_REQUESTS: 100           // 100 requests per 30 minutes per IP
+    WINDOW_MS: 60 * 60 * 1000,  // 1 hour window
+    MAX_REQUESTS: 100           // 100 requests per hour per IP
 };
 
 app.use((req, res, next) => {
@@ -287,17 +286,11 @@ app.use((req, res, next) => {
     
     // Check if limit exceeded
     if (validRequests.length >= RATE_LIMIT.MAX_REQUESTS) {
-        // Only log the first violation per IP per window to prevent log spam
-        if (!rateLimitViolations.has(clientIP)) {
-            log.warn('rate-limit', `Rate limit exceeded for IP: ${clientIP} (${validRequests.length} requests in window)`);
-            rateLimitViolations.add(clientIP);
-        }
-        
+        log.warn('rate-limit', `Rate limit exceeded for IP: ${clientIP}`);
         return res.status(429).json({
             error: 'Rate limit exceeded',
-            message: `Too many requests. Limit: ${RATE_LIMIT.MAX_REQUESTS} requests per 30 minutes. Server restart resets all limits.`,
-            retryAfter: Math.ceil((validRequests[0] + RATE_LIMIT.WINDOW_MS - now) / 1000),
-            resetInfo: 'Limits reset automatically after 30 minutes or when server restarts.'
+            message: `Too many requests. Limit: ${RATE_LIMIT.MAX_REQUESTS} requests per hour.`,
+            retryAfter: Math.ceil((validRequests[0] + RATE_LIMIT.WINDOW_MS - now) / 1000)
         });
     }
     
@@ -311,7 +304,6 @@ app.use((req, res, next) => {
             const validTimestamps = timestamps.filter(t => t > windowStart);
             if (validTimestamps.length === 0) {
                 rateLimit.delete(ip);
-                rateLimitViolations.delete(ip); // Also clean up violation tracking
             } else {
                 rateLimit.set(ip, validTimestamps);
             }
