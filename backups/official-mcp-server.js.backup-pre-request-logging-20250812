@@ -43,83 +43,13 @@ const app = express();
 const PORT = process.env.PORT || 443;
 
 /**
- * Usage analytics storage for request tracking
- * Tracks tool usage, popular drugs, and request patterns
- */
-const usageAnalytics = {
-    requests: {
-        total: 0,
-        byEndpoint: new Map(),
-        byTool: new Map(),
-        byDrug: new Map(),
-        errors: 0,
-        rateLimited: 0
-    },
-    startTime: new Date().toISOString()
-};
-
-/**
- * Log usage analytics for monitoring and insights
- * @param {string} type - Type of analytics event
- * @param {Object} data - Event data to log
- */
-function logUsage(type, data) {
-    const timestamp = new Date().toISOString();
-    
-    switch (type) {
-        case 'request':
-            usageAnalytics.requests.total++;
-            const endpoint = data.endpoint || 'unknown';
-            usageAnalytics.requests.byEndpoint.set(
-                endpoint, 
-                (usageAnalytics.requests.byEndpoint.get(endpoint) || 0) + 1
-            );
-            break;
-            
-        case 'tool':
-            const tool = data.tool || 'unknown';
-            usageAnalytics.requests.byTool.set(
-                tool, 
-                (usageAnalytics.requests.byTool.get(tool) || 0) + 1
-            );
-            
-            // Track drug names (normalize to lowercase)
-            if (data.drug && typeof data.drug === 'string') {
-                const drugName = data.drug.toLowerCase().trim();
-                if (drugName.length > 0) {
-                    usageAnalytics.requests.byDrug.set(
-                        drugName, 
-                        (usageAnalytics.requests.byDrug.get(drugName) || 0) + 1
-                    );
-                }
-            }
-            break;
-            
-        case 'error':
-            usageAnalytics.requests.errors++;
-            break;
-            
-        case 'rate_limit':
-            usageAnalytics.requests.rateLimited++;
-            break;
-    }
-}
-
-/**
  * Standardized logging utility for consistent monitoring and debugging
  */
 const log = {
     server: (msg) => console.log(`[SERVER] INFO: ${msg}`),
     mcp: (msg) => console.log(`[MCP] INFO: ${msg}`),
-    tool: (tool, drug, msg) => {
-        console.log(`[TOOL] INFO: ${tool} - drug: "${drug}", ${msg}`);
-        // Log analytics for tool usage
-        logUsage('tool', { tool, drug });
-    },
-    error: (component, msg) => {
-        console.error(`[${component.toUpperCase()}] ERROR: ${msg}`);
-        logUsage('error', { component, message: msg });
-    },
+    tool: (tool, drug, msg) => console.log(`[TOOL] INFO: ${tool} - drug: "${drug}", ${msg}`),
+    error: (component, msg) => console.error(`[${component.toUpperCase()}] ERROR: ${msg}`),
     warn: (component, msg) => console.warn(`[${component.toUpperCase()}] WARN: ${msg}`)
 };
 
@@ -363,9 +293,6 @@ app.use((req, res, next) => {
             rateLimitViolations.add(clientIP);
         }
         
-        // Log rate limiting analytics
-        logUsage('rate_limit', { ip: clientIP });
-        
         return res.status(429).json({
             error: 'Rate limit exceeded',
             message: `Too many requests. Limit: ${RATE_LIMIT.MAX_REQUESTS} requests per 30 minutes. Server restart resets all limits.`,
@@ -402,7 +329,6 @@ app.use((req, res, next) => {
 app.get('/health', async (req, res) => {
     try {
         log.server('Health check requested');
-        logUsage('request', { endpoint: '/health' });
         const healthData = await healthCheck();
         
         const response = { 
@@ -441,7 +367,6 @@ app.get('/robots.txt', (req, res) => {
 app.get('/cache-stats', (req, res) => {
     try {
         log.server('Cache statistics requested');
-        logUsage('request', { endpoint: '/cache-stats' });
         const stats = getCacheStats();
         
         const response = {
@@ -470,7 +395,6 @@ app.get('/cache-stats', (req, res) => {
 app.post('/cache-cleanup', (req, res) => {
     try {
         log.server('Manual cache cleanup requested');
-        logUsage('request', { endpoint: '/cache-cleanup' });
         const statsBefore = getCacheStats();
         
         cleanExpiredCache();
@@ -495,75 +419,12 @@ app.post('/cache-cleanup', (req, res) => {
 });
 
 /**
- * Usage analytics endpoint - provides server usage statistics
- * @route GET /usage-stats
- * @returns {Object} Server usage analytics and insights
- */
-app.get('/usage-stats', (req, res) => {
-    try {
-        log.server('Usage statistics requested');
-        logUsage('request', { endpoint: '/usage-stats' });
-        
-        // Convert Maps to arrays for JSON serialization
-        const topTools = Array.from(usageAnalytics.requests.byTool.entries())
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 10)
-            .map(([tool, count]) => ({ tool, count }));
-            
-        const topDrugs = Array.from(usageAnalytics.requests.byDrug.entries())
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 10)
-            .map(([drug, count]) => ({ drug, count }));
-            
-        const topEndpoints = Array.from(usageAnalytics.requests.byEndpoint.entries())
-            .sort(([,a], [,b]) => b - a)
-            .map(([endpoint, count]) => ({ endpoint, count }));
-        
-        const uptime = Math.floor((Date.now() - new Date(usageAnalytics.startTime).getTime()) / 1000);
-        const uptimeHours = Math.floor(uptime / 3600);
-        const uptimeMinutes = Math.floor((uptime % 3600) / 60);
-        
-        const response = {
-            timestamp: new Date().toISOString(),
-            server_start_time: usageAnalytics.startTime,
-            uptime: {
-                seconds: uptime,
-                human_readable: `${uptimeHours}h ${uptimeMinutes}m`
-            },
-            request_summary: {
-                total_requests: usageAnalytics.requests.total,
-                successful_requests: usageAnalytics.requests.total - usageAnalytics.requests.errors,
-                error_requests: usageAnalytics.requests.errors,
-                rate_limited_requests: usageAnalytics.requests.rateLimited,
-                requests_per_hour: Math.round(usageAnalytics.requests.total / Math.max(uptimeHours, 1))
-            },
-            top_fda_tools: topTools,
-            most_searched_drugs: topDrugs,
-            endpoint_usage: topEndpoints,
-            insights: {
-                most_popular_tool: topTools[0]?.tool || 'none',
-                most_searched_drug: topDrugs[0]?.drug || 'none',
-                error_rate: `${Math.round((usageAnalytics.requests.errors / Math.max(usageAnalytics.requests.total, 1)) * 100)}%`,
-                average_requests_per_minute: Math.round(usageAnalytics.requests.total / Math.max(uptime / 60, 1))
-            }
-        };
-        
-        res.json(response);
-        log.server(`Usage stats: ${usageAnalytics.requests.total} total requests, ${topTools.length} unique tools used`);
-    } catch (error) {
-        log.error('usage-stats', `Usage stats failed: ${error.message}`);
-        res.status(500).json({ error: 'Failed to retrieve usage statistics' });
-    }
-});
-
-/**
  * Server information endpoint - provides API documentation and tool overview
  * @route GET /
  * @returns {Object} Server metadata, available tools, and architectural notes
  */
 app.get('/', (req, res) => {
     log.server('Info endpoint accessed');
-    logUsage('request', { endpoint: '/' });
     
     const toolSummary = TOOL_DEFINITIONS.map(tool => ({
         name: tool.name,
@@ -578,9 +439,7 @@ app.get('/', (req, res) => {
         endpoints: {
             health: "/health",
             mcp: "/mcp",
-            tools: "/tools",
-            usage_stats: "/usage-stats",
-            cache_stats: "/cache-stats"
+            tools: "/tools"
         },
         tools: toolSummary,
         optimization_notes: [
@@ -599,7 +458,6 @@ app.get('/', (req, res) => {
  */
 app.get('/tools', (req, res) => {
     log.mcp('Tools schema requested');
-    logUsage('request', { endpoint: '/tools' });
     res.json({ tools: TOOL_DEFINITIONS });
 });
 
@@ -614,7 +472,6 @@ app.post('/mcp', async (req, res) => {
     try {
         const { method, params, id } = req.body;
         log.mcp(`Request received: ${method || 'unknown'}`);
-        logUsage('request', { endpoint: '/mcp', method });
         
         let response = {
             jsonrpc: "2.0",
@@ -834,9 +691,7 @@ app.use((req, res) => {
                 "/": "Server information and available tools",
                 "/health": "Server health status",
                 "/mcp": "MCP protocol endpoint for tool calls",
-                "/tools": "Available FDA drug information tools",
-                "/usage-stats": "Server usage analytics and insights",
-                "/cache-stats": "Cache statistics and monitoring"
+                "/tools": "Available FDA drug information tools"
             },
             timestamp: new Date().toISOString()
         });
