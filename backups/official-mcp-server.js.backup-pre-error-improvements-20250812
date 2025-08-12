@@ -521,36 +521,13 @@ app.post('/mcp', async (req, res) => {
         
     } catch (error) {
         log.error('mcp', `Request processing failed: ${error.message}`);
-        
-        // Check if this is a user-friendly error from tool execution
-        let errorResponse = {
-            code: -32603,
-            message: "We encountered an issue processing your request. Please try again in a moment.",
-            suggestions: [
-                "Check your internet connection",
-                "Verify the drug name is spelled correctly", 
-                "Try again in a few moments",
-                "Contact support if the issue persists"
-            ],
-            support: "https://github.com/zesty-genius128/Certus_server/issues"
-        };
-        
-        // If it's a structured error from tool execution, use that info
-        if (error.userFriendly) {
-            errorResponse.message = error.message;
-            errorResponse.suggestions = error.suggestions;
-            errorResponse.tool_name = error.tool_name;
-        }
-        
-        // Add technical details in development
-        if (process.env.NODE_ENV === 'development') {
-            errorResponse.technical_details = error.technical_details || error.message;
-        }
-        
         res.status(500).json({
             jsonrpc: "2.0",
             id: req.body?.id || null,
-            error: errorResponse
+            error: {
+                code: -32603,
+                message: error.message
+            }
         });
     }
 });
@@ -610,7 +587,7 @@ async function handleToolCall(name, args) {
                 break;
                 
             default:
-                throw new Error(`Tool '${name}' is not available. Available tools: ${TOOL_DEFINITIONS.map(t => t.name).join(', ')}`);
+                throw new Error(`Unknown tool: ${name}`);
         }
         
         log.tool(name, drugName, 'completed successfully');
@@ -625,29 +602,7 @@ async function handleToolCall(name, args) {
         
     } catch (toolError) {
         log.error('tool', `${name} failed: ${toolError.message}`);
-        
-        // Provide user-friendly error message based on error type
-        let userMessage = "Unable to complete your request right now.";
-        let suggestions = ["Try again in a moment", "Check your internet connection"];
-        
-        if (toolError.message.includes('drug_name')) {
-            userMessage = "Please provide a valid drug name to search for.";
-            suggestions = ["Check the spelling of the drug name", "Try using the generic name instead of brand name", "Examples: insulin, metformin, aspirin"];
-        } else if (toolError.message.includes('timeout') || toolError.message.includes('network')) {
-            userMessage = "The FDA database is temporarily unavailable.";
-            suggestions = ["Try again in a few minutes", "Check your internet connection", "The FDA servers may be experiencing high traffic"];
-        } else if (toolError.message.includes('404') || toolError.message.includes('not found')) {
-            userMessage = `No information found for this drug. This may mean the drug has no ${name.includes('shortage') ? 'shortages' : name.includes('recall') ? 'recalls' : name.includes('adverse') ? 'adverse events' : 'data'} on record.`;
-            suggestions = ["Try a different spelling", "Use the generic drug name", "Check if the drug is FDA-approved"];
-        }
-        
-        // Create structured error for better handling
-        const structuredError = new Error(userMessage);
-        structuredError.userFriendly = true;
-        structuredError.suggestions = suggestions;
-        structuredError.technical_details = toolError.message;
-        structuredError.tool_name = name;
-        throw structuredError;
+        throw toolError;
     }
 }
 
@@ -659,15 +614,8 @@ app.use((error, req, res, next) => {
     log.error('express', `Unhandled error: ${error.message}`);
     if (!res.headersSent) {
         res.status(500).json({
-            error: 'Service temporarily unavailable',
-            message: 'We are experiencing technical difficulties. Please try again in a few moments.',
-            suggestions: [
-                "Try your request again in a few minutes",
-                "Check if the service is operational",
-                "Contact support if the issue continues"
-            ],
-            support: "https://github.com/zesty-genius128/Certus_server/issues",
-            technical_details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            error: 'Internal server error',
+            message: error.message,
             timestamp: new Date().toISOString()
         });
     }
@@ -680,19 +628,9 @@ app.use((req, res) => {
     log.warn('express', `404 - Unknown route: ${req.path}`);
     if (!res.headersSent) {
         res.status(404).json({
-            error: 'Page not found',
-            message: `The endpoint '${req.path}' does not exist on this server.`,
-            suggestions: [
-                "Check the URL spelling",
-                "Use one of the available endpoints below",
-                "Visit the main page at '/' for more information"
-            ],
-            available_endpoints: {
-                "/": "Server information and available tools",
-                "/health": "Server health status",
-                "/mcp": "MCP protocol endpoint for tool calls",
-                "/tools": "Available FDA drug information tools"
-            },
+            error: 'Not found',
+            path: req.path,
+            available_endpoints: ['/health', '/mcp', '/tools'],
             timestamp: new Date().toISOString()
         });
     }
