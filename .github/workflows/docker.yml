@@ -128,7 +128,7 @@ jobs:
           exit 1
         }
         
-        echo "✅ Docker image tests passed!"
+        echo "Docker image tests passed!"
         
         # Cleanup
         docker stop test-container

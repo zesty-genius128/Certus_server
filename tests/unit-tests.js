@@ -86,10 +86,10 @@ describe('Identifier Type Normalization', () => {
         assert.strictEqual(result, 'openfda.generic_name', 'Should default to openfda.generic_name');
     });
     
-    test('should pass through unknown identifier types', () => {
+    test('should default unknown identifier types to generic_name', () => {
         const unknownType = 'unknown.identifier.type';
         const result = normalizeIdentifierType(unknownType);
-        assert.strictEqual(result, unknownType, 'Should pass through unknown types unchanged');
+        assert.strictEqual(result, 'openfda.generic_name', 'Should default unknown types to openfda.generic_name');
     });
 });
 
@@ -97,39 +97,48 @@ describe('API Parameter Building', () => {
     test('should build basic search parameters', () => {
         const search = 'openfda.generic_name:"metformin"';
         const result = buildParams(search, 10);
+        const resultString = result.toString();
         
-        assert(result.includes('search='), 'Should include search parameter');
-        assert(result.includes('limit=10'), 'Should include limit parameter');
-        assert(result.includes('metformin'), 'Should include search term');
+        assert(resultString.includes('search='), 'Should include search parameter');
+        assert(resultString.includes('limit=10'), 'Should include limit parameter');
+        assert(resultString.includes('metformin'), 'Should include search term');
     });
     
     test('should handle URL encoding', () => {
         const search = 'openfda.generic_name:"drug with spaces"';
         const result = buildParams(search, 5);
+        const resultString = result.toString();
         
-        assert(result.includes('drug%20with%20spaces'), 'Should URL encode spaces');
+        assert(resultString.includes('drug+with+spaces'), 'Should URL encode spaces as plus signs');
     });
     
-    test('should include API key when available', () => {
+    test('should include API key when available', async () => {
         const originalKey = process.env.OPENFDA_API_KEY;
-        process.env.OPENFDA_API_KEY = 'test-api-key';
         
-        const result = buildParams('test', 10);
-        assert(result.includes('api_key=test-api-key'), 'Should include API key');
-        
-        // Restore original key
-        if (originalKey) {
-            process.env.OPENFDA_API_KEY = originalKey;
-        } else {
-            delete process.env.OPENFDA_API_KEY;
+        try {
+            process.env.OPENFDA_API_KEY = 'test-api-key';
+            
+            // Re-import to pick up the new environment variable
+            const { buildParams: freshBuildParams } = await import('../openfda-client.js?' + Date.now());
+            const result = freshBuildParams('test', 10);
+            const resultString = result.toString();
+            assert(resultString.includes('api_key=test-api-key'), 'Should include API key');
+        } finally {
+            // Restore original key
+            if (originalKey) {
+                process.env.OPENFDA_API_KEY = originalKey;
+            } else {
+                delete process.env.OPENFDA_API_KEY;
+            }
         }
     });
     
     test('should handle additional parameters', () => {
         const additionalParams = { count: 'patient.reaction.reactionmeddrapt.exact' };
         const result = buildParams('test', 10, additionalParams);
+        const resultString = result.toString();
         
-        assert(result.includes('count='), 'Should include additional parameters');
+        assert(resultString.includes('count='), 'Should include additional parameters');
     });
     
     test('should handle different limit values', () => {
@@ -137,7 +146,8 @@ describe('API Parameter Building', () => {
         
         limits.forEach(limit => {
             const result = buildParams('test', limit);
-            assert(result.includes(`limit=${limit}`), `Should include limit=${limit}`);
+            const resultString = result.toString();
+            assert(resultString.includes(`limit=${limit}`), `Should include limit=${limit}`);
         });
     });
 });

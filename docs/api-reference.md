@@ -50,8 +50,8 @@ Search the FDA drug shortage database for current and resolved shortages.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_name` | string | ✅ | - | Name of the drug to search (generic or brand name) |
-| `limit` | integer | ❌ | 10 | Maximum results to return (1-50) |
+| `drug_name` | string | Required | - | Name of the drug to search (generic or brand name) |
+| `limit` | integer | Optional | 10 | Maximum results to return (1-50) |
 
 **Example Request:**
 
@@ -103,9 +103,9 @@ Search FDA Adverse Event Reporting System (FAERS) for reported side effects and 
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_name` | string | ✅ | - | Name of the drug to search for adverse events |
-| `limit` | integer | ❌ | 5 | Maximum adverse event reports to return (1-50) |
-| `detailed` | boolean | ❌ | false | Return full raw FDA data (true) or summarized (false) |
+| `drug_name` | string | Required | - | Name of the drug to search for adverse events |
+| `limit` | integer | Optional | 5 | Maximum adverse event reports to return (1-50) |
+| `detailed` | boolean | Optional | false | Return full raw FDA data (true) or summarized (false) |
 
 **Example Request:**
 
@@ -143,9 +143,9 @@ Search serious adverse events only (death, hospitalization, disability).
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_name` | string | ✅ | - | Name of the drug to search for serious adverse events |
-| `limit` | integer | ❌ | 5 | Maximum serious adverse event reports (1-50) |
-| `detailed` | boolean | ❌ | false | Return full raw FDA data (true) or summarized (false) |
+| `drug_name` | string | Required | - | Name of the drug to search for serious adverse events |
+| `limit` | integer | Optional | 5 | Maximum serious adverse event reports (1-50) |
+| `detailed` | boolean | Optional | false | Return full raw FDA data (true) or summarized (false) |
 
 ---
 
@@ -165,8 +165,8 @@ Search the FDA enforcement database for drug recalls and safety alerts.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_name` | string | ✅ | - | Drug name to search for recalls |
-| `limit` | integer | ❌ | 10 | Maximum number of results (1-50) |
+| `drug_name` | string | Required | - | Drug name to search for recalls |
+| `limit` | integer | Optional | 10 | Maximum number of results (1-50) |
 
 ---
 
@@ -184,8 +184,8 @@ Retrieve FDA-approved prescribing information and structured product labeling.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_identifier` | string | ✅ | - | The drug identifier to search for |
-| `identifier_type` | string | ❌ | "openfda.generic_name" | Type of identifier to use |
+| `drug_identifier` | string | Required | - | The drug identifier to search for |
+| `identifier_type` | string | Optional | "openfda.generic_name" | Type of identifier to use |
 
 **Identifier Types:**
 
@@ -212,8 +212,8 @@ Get combined medication overview with both FDA label data and current shortage s
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_identifier` | string | ✅ | - | The drug identifier to search for |
-| `identifier_type` | string | ❌ | "openfda.generic_name" | Type of identifier to use |
+| `drug_identifier` | string | Required | - | The drug identifier to search for |
+| `identifier_type` | string | Optional | "openfda.generic_name" | Type of identifier to use |
 
 ---
 
@@ -231,8 +231,8 @@ Analyze historical FDA drug shortage patterns over specified time periods.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_name` | string | ✅ | - | Drug name to analyze |
-| `months_back` | integer | ❌ | 12 | Number of months to analyze (1-60) |
+| `drug_name` | string | Required | - | Drug name to analyze |
+| `months_back` | integer | Optional | 12 | Number of months to analyze (1-60) |
 
 **Analysis Output:**
 
@@ -258,8 +258,8 @@ Analyze multiple drugs simultaneously for shortages, recalls, and optional trend
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `drug_list` | array | ✅ | - | List of drug names to analyze (max 25) |
-| `include_trends` | boolean | ❌ | false | Include trend analysis for each drug |
+| `drug_list` | array | Required | - | List of drug names to analyze (max 25) |
+| `include_trends` | boolean | Optional | false | Include trend analysis for each drug |
 
 **Example Request:**
 
@@ -356,7 +356,7 @@ All tools connect to official FDA openFDA APIs:
 
 ## Medical Safety Disclaimers
 
-⚠️ **Important Medical Safety Information:**
+**IMPORTANT - Medical Safety Information:**
 
 1. **Raw FDA Data**: All responses contain unprocessed FDA data to preserve medical accuracy
 2. **No Medical Advice**: This server provides information only, not medical advice
