@@ -52,6 +52,10 @@ jobs:
         # Test if server is responsive
         curl -f http://localhost:3000/health || echo "Server health check on port 3000"
         
+        # Test new endpoints added in recent updates
+        curl -f http://localhost:3000/usage-stats || echo "Usage stats endpoint check"
+        curl -f http://localhost:3000/cache-stats || echo "Cache stats endpoint check"
+        
         # Clean up
         kill $SERVER_PID || true
         
@@ -114,9 +118,9 @@ jobs:
         process.env.PORT = '3000';
         setTimeout(() => process.exit(0), 100);
         import('./official-mcp-server.js').then(() => {
-          console.log('✅ MCP server imports successfully');
+          console.log('MCP server imports successfully');
         }).catch(err => {
-          console.error('❌ MCP server import failed:', err.message);
+          console.error('MCP server import failed:', err.message);
           process.exit(1);
         });
         "
@@ -166,13 +170,13 @@ jobs:
         
         requiredEndpoints.forEach(endpoint => {
           if (!content.includes(endpoint)) {
-            console.error('❌ Missing MCP endpoint:', endpoint);
+            console.error('Missing MCP endpoint:', endpoint);
             hasAllEndpoints = false;
           }
         });
         
         if (hasAllEndpoints) {
-          console.log('✅ All required MCP endpoints found');
+          console.log('All required MCP endpoints found');
         } else {
           process.exit(1);
         }
