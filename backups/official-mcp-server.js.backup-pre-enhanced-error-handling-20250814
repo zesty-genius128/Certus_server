@@ -1,0 +1,876 @@
+/**
+ * Certus - OpenFDA Drug Information MCP Server
+ * 
+ * Architecture Overview:
+ * This server implements a hybrid approach for maximum MCP client compatibility:
+ * - HTTP-based server with JSON-RPC endpoint at /mcp
+ * - Works with stdio transport via bridges (npx mcp-remote, custom stdio wrappers)
+ * - Universal compatibility: Claude Desktop, VS Code, Cursor, Visual Studio, Windsurf, LibreChat
+ * 
+ * Key Design Decisions:
+ * - HTTP server implementing MCP Streamable HTTP transport for production reliability
+ * - Stdio bridges handle transport protocol differences between clients
+ * - Raw FDA API responses preserved for accurate medical data
+ * - No complex authentication - focuses on core FDA data access
+ * 
+ * @author Aditya Damerla
+ * @version 2.0.0
+ */
+
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import { 
+    searchDrugShortages,
+    fetchDrugLabelInfo,
+    searchDrugRecalls,
+    analyzeDrugShortageTrends,
+    batchDrugAnalysis,
+    getMedicationProfile,
+    searchAdverseEvents,
+    searchSeriousAdverseEvents,
+    getCacheStats,
+    cleanExpiredCache,
+    healthCheck
+} from './openfda-client.js';
+
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 443;
+
+/**
+ * Usage analytics storage for request tracking
+ * Tracks tool usage, popular drugs, and request patterns
+ */
+const usageAnalytics = {
+    requests: {
+        total: 0,
+        byEndpoint: new Map(),
+        byTool: new Map(),
+        byDrug: new Map(),
+        errors: 0,
+        rateLimited: 0
+    },
+    startTime: new Date().toISOString()
+};
+
+/**
+ * Log usage analytics for monitoring and insights
+ * @param {string} type - Type of analytics event
+ * @param {Object} data - Event data to log
+ */
+function logUsage(type, data) {
+    const timestamp = new Date().toISOString();
+    
+    switch (type) {
+        case 'request':
+            usageAnalytics.requests.total++;
+            const endpoint = data.endpoint || 'unknown';
+            usageAnalytics.requests.byEndpoint.set(
+                endpoint, 
+                (usageAnalytics.requests.byEndpoint.get(endpoint) || 0) + 1
+            );
+            break;
+            
+        case 'tool':
+            const tool = data.tool || 'unknown';
+            usageAnalytics.requests.byTool.set(
+                tool, 
+                (usageAnalytics.requests.byTool.get(tool) || 0) + 1
+            );
+            
+            // Track drug names (normalize to lowercase)
+            if (data.drug && typeof data.drug === 'string') {
+                const drugName = data.drug.toLowerCase().trim();
+                if (drugName.length > 0) {
+                    usageAnalytics.requests.byDrug.set(
+                        drugName, 
+                        (usageAnalytics.requests.byDrug.get(drugName) || 0) + 1
+                    );
+                }
+            }
+            break;
+            
+        case 'error':
+            usageAnalytics.requests.errors++;
+            break;
+            
+        case 'rate_limit':
+            usageAnalytics.requests.rateLimited++;
+            break;
+    }
+}
+
+/**
+ * Standardized logging utility for consistent monitoring and debugging
+ */
+const log = {
+    server: (msg) => console.log(`[SERVER] INFO: ${msg}`),
+    mcp: (msg) => console.log(`[MCP] INFO: ${msg}`),
+    tool: (tool, drug, msg) => {
+        console.log(`[TOOL] INFO: ${tool} - drug: "${drug}", ${msg}`);
+        // Log analytics for tool usage
+        logUsage('tool', { tool, drug });
+    },
+    error: (component, msg) => {
+        console.error(`[${component.toUpperCase()}] ERROR: ${msg}`);
+        logUsage('error', { component, message: msg });
+    },
+    warn: (component, msg) => console.warn(`[${component.toUpperCase()}] WARN: ${msg}`)
+};
+
+/**
+ * Tool definitions - single source of truth for all 8 FDA drug information tools
+ * Used by /tools endpoint, MCP tools/list, and documentation
+ */
+const TOOL_DEFINITIONS = [
+    {
+        name: "search_drug_shortages",
+        description: "Search current FDA drug shortages. Use when asked about drug availability, shortages, supply issues, or 'is [drug] in shortage'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Name of the drug to search for shortages (generic or brand name)"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of results to return",
+                    default: 10,
+                    minimum: 1,
+                    maximum: 50
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "search_adverse_events",
+        description: "Search FDA adverse events and side effects. Use when asked about 'side effects', 'adverse events', 'reactions', 'safety concerns', or 'what are the side effects of [drug]'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Name of the drug to search for adverse events (generic or brand name)"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of adverse event reports to return",
+                    default: 5,
+                    minimum: 1,
+                    maximum: 50
+                },
+                detailed: {
+                    type: "boolean",
+                    description: "Return full raw FDA data (true) or summarized data (false). Default false for better performance.",
+                    default: false
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "search_serious_adverse_events",
+        description: "Search serious adverse events only (death, hospitalization, disability). Use when asked about 'serious side effects', 'dangerous reactions', 'fatal events', or 'hospitalizations from [drug]'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Name of the drug to search for serious adverse events"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of serious adverse event reports to return",
+                    default: 5,
+                    minimum: 1,
+                    maximum: 50
+                },
+                detailed: {
+                    type: "boolean",
+                    description: "Return full raw FDA data (true) or summarized data (false). Default false for better performance.",
+                    default: false
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "search_drug_recalls",
+        description: "Search FDA drug recalls and safety alerts. Use when asked about 'recalls', 'safety alerts', 'withdrawn drugs', or 'has [drug] been recalled'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Drug name to search for recalls"
+                },
+                limit: {
+                    type: "integer",
+                    description: "Maximum number of results",
+                    default: 10,
+                    minimum: 1,
+                    maximum: 50
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "get_drug_label_info",
+        description: "Get FDA prescribing information and drug labeling. Use when asked about 'prescribing info', 'FDA label', 'dosage forms', 'indications', or 'how is [drug] prescribed'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_identifier: {
+                    type: "string",
+                    description: "The drug identifier to search for"
+                },
+                identifier_type: {
+                    type: "string",
+                    description: "The type of identifier",
+                    default: "openfda.generic_name",
+                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
+                }
+            },
+            required: ["drug_identifier"]
+        }
+    },
+    {
+        name: "get_medication_profile",
+        description: "Get combined medication overview (label + shortage status only). Use when asked for 'complete information', 'full profile', or 'everything about [drug]' but NOT for side effects or adverse events.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_identifier: {
+                    type: "string",
+                    description: "The drug identifier to search for"
+                },
+                identifier_type: {
+                    type: "string",
+                    description: "The type of identifier",
+                    default: "openfda.generic_name",
+                    enum: ["openfda.generic_name", "openfda.brand_name", "generic_name", "brand_name"]
+                }
+            },
+            required: ["drug_identifier"]
+        }
+    },
+    {
+        name: "analyze_drug_shortage_trends",
+        description: "Analyze FDA drug shortage patterns over time. Use when asked about 'shortage trends', 'historical patterns', 'shortage analysis over time', or 'trends for [drug]'.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_name: {
+                    type: "string",
+                    description: "Drug name to analyze"
+                },
+                months_back: {
+                    type: "integer",
+                    description: "Number of months to look back",
+                    default: 12,
+                    minimum: 1,
+                    maximum: 60
+                }
+            },
+            required: ["drug_name"]
+        }
+    },
+    {
+        name: "batch_drug_analysis",
+        description: "Analyze multiple drugs simultaneously for shortages, recalls, and optional trends. Use when asked to 'compare multiple drugs', 'analyze this list of drugs', 'check these medications for problems', or given a list of 2+ medications to analyze.",
+        inputSchema: {
+            type: "object",
+            properties: {
+                drug_list: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of drug names to analyze",
+                    maxItems: 25
+                },
+                include_trends: {
+                    type: "boolean",
+                    description: "Whether to include trend analysis",
+                    default: false
+                }
+            },
+            required: ["drug_list"]
+        }
+    }
+];
+
+/**
+ * Express middleware configuration for security, compression, and logging
+ */
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+}));
+app.use(compression());
+app.use(morgan('combined'));
+
+/**
+ * CORS configuration for universal client access
+ * Allows all origins for maximum MCP client compatibility
+ */
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
+    credentials: false
+}));
+
+app.use(express.json({ limit: '10mb' }));
+
+/**
+ * Simple rate limiting middleware to prevent abuse
+ * Tracks requests per IP address with a reasonable limit for FDA API usage
+ */
+const rateLimit = new Map();
+const rateLimitViolations = new Set(); // Track IPs that have been logged this window
+const RATE_LIMIT = {
+    WINDOW_MS: 30 * 60 * 1000,  // 30 minute window
+    MAX_REQUESTS: 100           // 100 requests per 30 minutes per IP
+};
+
+app.use((req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    const now = Date.now();
+    const windowStart = now - RATE_LIMIT.WINDOW_MS;
+    
+    // Get or create rate limit data for this IP
+    if (!rateLimit.has(clientIP)) {
+        rateLimit.set(clientIP, []);
+    }
+    
+    const requests = rateLimit.get(clientIP);
+    
+    // Remove expired requests from the window
+    const validRequests = requests.filter(timestamp => timestamp > windowStart);
+    
+    // Check if limit exceeded
+    if (validRequests.length >= RATE_LIMIT.MAX_REQUESTS) {
+        // Only log the first violation per IP per window to prevent log spam
+        if (!rateLimitViolations.has(clientIP)) {
+            log.warn('rate-limit', `Rate limit exceeded for IP: ${clientIP} (${validRequests.length} requests in window)`);
+            rateLimitViolations.add(clientIP);
+        }
+        
+        // Log rate limiting analytics
+        logUsage('rate_limit', { ip: clientIP });
+        
+        return res.status(429).json({
+            error: 'Rate limit exceeded',
+            message: `Too many requests. Limit: ${RATE_LIMIT.MAX_REQUESTS} requests per 30 minutes. Server restart resets all limits.`,
+            retryAfter: Math.ceil((validRequests[0] + RATE_LIMIT.WINDOW_MS - now) / 1000),
+            resetInfo: 'Limits reset automatically after 30 minutes or when server restarts.'
+        });
+    }
+    
+    // Add current request timestamp
+    validRequests.push(now);
+    rateLimit.set(clientIP, validRequests);
+    
+    // Clean up old entries periodically (every 100 requests)
+    if (Math.random() < 0.01) {
+        for (const [ip, timestamps] of rateLimit.entries()) {
+            const validTimestamps = timestamps.filter(t => t > windowStart);
+            if (validTimestamps.length === 0) {
+                rateLimit.delete(ip);
+                rateLimitViolations.delete(ip); // Also clean up violation tracking
+            } else {
+                rateLimit.set(ip, validTimestamps);
+            }
+        }
+    }
+    
+    next();
+});
+
+/**
+ * Health check endpoint for monitoring and uptime verification
+ * @route GET /health
+ * @returns {Object} Server health status and API connectivity
+ */
+app.get('/health', async (req, res) => {
+    try {
+        log.server('Health check requested');
+        logUsage('request', { endpoint: '/health' });
+        const healthData = await healthCheck();
+        
+        const response = { 
+            status: 'healthy', 
+            timestamp: new Date().toISOString(),
+            service: 'OpenFDA MCP Server',
+            protocol: req.secure ? 'HTTPS' : 'HTTP',
+            host: req.get('host'),
+            tools_available: TOOL_DEFINITIONS.length,
+            api_health: healthData
+        };
+        
+        res.json(response);
+        log.server(`Health check completed - status: healthy, tools: ${TOOL_DEFINITIONS.length}`);
+    } catch (error) {
+        log.error('health', `Health check failed: ${error.message}`);
+        res.status(500).json({ status: 'unhealthy', error: error.message });
+    }
+});
+
+/**
+ * Robots.txt endpoint - controls web crawler access
+ * @route GET /robots.txt
+ * @returns {String} Robots.txt content with crawler directives
+ */
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain');
+    res.send('User-agent: *\nDisallow: /');
+});
+
+/**
+ * Cache statistics endpoint - provides real-time cache monitoring
+ * @route GET /cache-stats
+ * @returns {Object} Cache statistics including size, memory usage, and entry breakdown
+ */
+app.get('/cache-stats', (req, res) => {
+    try {
+        log.server('Cache statistics requested');
+        logUsage('request', { endpoint: '/cache-stats' });
+        const stats = getCacheStats();
+        
+        const response = {
+            timestamp: new Date().toISOString(),
+            status: 'active',
+            cache: stats,
+            cleanup: {
+                interval: '1 hour',
+                next_cleanup: 'automatic'
+            }
+        };
+        
+        res.json(response);
+        log.server(`Cache stats: ${stats.totalEntries} entries, ~${Math.round(stats.memoryUsageApprox/1024)}KB`);
+    } catch (error) {
+        log.error('cache-stats', `Cache stats failed: ${error.message}`);
+        res.status(500).json({ error: 'Failed to retrieve cache statistics' });
+    }
+});
+
+/**
+ * Manual cache cleanup endpoint - triggers immediate cache cleanup
+ * @route POST /cache-cleanup
+ * @returns {Object} Cleanup results and updated cache statistics
+ */
+app.post('/cache-cleanup', (req, res) => {
+    try {
+        log.server('Manual cache cleanup requested');
+        logUsage('request', { endpoint: '/cache-cleanup' });
+        const statsBefore = getCacheStats();
+        
+        cleanExpiredCache();
+        
+        const statsAfter = getCacheStats();
+        const entriesRemoved = statsBefore.totalEntries - statsAfter.totalEntries;
+        
+        const response = {
+            timestamp: new Date().toISOString(),
+            cleanup_completed: true,
+            entries_removed: entriesRemoved,
+            cache_before: statsBefore,
+            cache_after: statsAfter
+        };
+        
+        res.json(response);
+        log.server(`Manual cleanup completed: ${entriesRemoved} entries removed`);
+    } catch (error) {
+        log.error('cache-cleanup', `Manual cache cleanup failed: ${error.message}`);
+        res.status(500).json({ error: 'Failed to perform cache cleanup' });
+    }
+});
+
+/**
+ * Usage analytics endpoint - provides server usage statistics
+ * @route GET /usage-stats
+ * @returns {Object} Server usage analytics and insights
+ */
+app.get('/usage-stats', (req, res) => {
+    try {
+        log.server('Usage statistics requested');
+        logUsage('request', { endpoint: '/usage-stats' });
+        
+        // Convert Maps to arrays for JSON serialization
+        const topTools = Array.from(usageAnalytics.requests.byTool.entries())
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10)
+            .map(([tool, count]) => ({ tool, count }));
+            
+        const topDrugs = Array.from(usageAnalytics.requests.byDrug.entries())
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10)
+            .map(([drug, count]) => ({ drug, count }));
+            
+        const topEndpoints = Array.from(usageAnalytics.requests.byEndpoint.entries())
+            .sort(([,a], [,b]) => b - a)
+            .map(([endpoint, count]) => ({ endpoint, count }));
+        
+        const uptime = Math.floor((Date.now() - new Date(usageAnalytics.startTime).getTime()) / 1000);
+        const uptimeHours = Math.floor(uptime / 3600);
+        const uptimeMinutes = Math.floor((uptime % 3600) / 60);
+        
+        const response = {
+            timestamp: new Date().toISOString(),
+            server_start_time: usageAnalytics.startTime,
+            uptime: {
+                seconds: uptime,
+                human_readable: `${uptimeHours}h ${uptimeMinutes}m`
+            },
+            request_summary: {
+                total_requests: usageAnalytics.requests.total,
+                successful_requests: usageAnalytics.requests.total - usageAnalytics.requests.errors,
+                error_requests: usageAnalytics.requests.errors,
+                rate_limited_requests: usageAnalytics.requests.rateLimited,
+                requests_per_hour: Math.round(usageAnalytics.requests.total / Math.max(uptimeHours, 1))
+            },
+            top_fda_tools: topTools,
+            most_searched_drugs: topDrugs,
+            endpoint_usage: topEndpoints,
+            insights: {
+                most_popular_tool: topTools[0]?.tool || 'none',
+                most_searched_drug: topDrugs[0]?.drug || 'none',
+                error_rate: `${Math.round((usageAnalytics.requests.errors / Math.max(usageAnalytics.requests.total, 1)) * 100)}%`,
+                average_requests_per_minute: Math.round(usageAnalytics.requests.total / Math.max(uptime / 60, 1))
+            }
+        };
+        
+        res.json(response);
+        log.server(`Usage stats: ${usageAnalytics.requests.total} total requests, ${topTools.length} unique tools used`);
+    } catch (error) {
+        log.error('usage-stats', `Usage stats failed: ${error.message}`);
+        res.status(500).json({ error: 'Failed to retrieve usage statistics' });
+    }
+});
+
+/**
+ * Server information endpoint - provides API documentation and tool overview
+ * @route GET /
+ * @returns {Object} Server metadata, available tools, and architectural notes
+ */
+app.get('/', (req, res) => {
+    log.server('Info endpoint accessed');
+    logUsage('request', { endpoint: '/' });
+    
+    const toolSummary = TOOL_DEFINITIONS.map(tool => ({
+        name: tool.name,
+        description: tool.description.split('.')[0] // First sentence only
+    }));
+
+    res.json({
+        name: "OpenFDA Drug Information MCP Server",
+        version: "2.0.0",
+        description: "Optimized MCP server for FDA drug information with minimal post-processing",
+        architecture: "HTTP server with stdio transport bridge compatibility",
+        endpoints: {
+            health: "/health",
+            mcp: "/mcp",
+            tools: "/tools",
+            usage_stats: "/usage-stats",
+            cache_stats: "/cache-stats"
+        },
+        tools: toolSummary,
+        optimization_notes: [
+            "Minimal post-processing of API data",
+            "Raw OpenFDA JSON responses preserved",
+            "Reduced data transformation overhead",
+            "Enhanced for Claude analysis"
+        ]
+    });
+});
+
+/**
+ * MCP-compatible tools endpoint for schema discovery
+ * @route GET /tools
+ * @returns {Object} Complete tool definitions with input schemas
+ */
+app.get('/tools', (req, res) => {
+    log.mcp('Tools schema requested');
+    logUsage('request', { endpoint: '/tools' });
+    res.json({ tools: TOOL_DEFINITIONS });
+});
+
+/**
+ * Main MCP Protocol endpoint - handles JSON-RPC 2.0 requests
+ * Supports: initialize, ping, tools/list, tools/call
+ * @route POST /mcp
+ * @param {Object} req.body - JSON-RPC 2.0 request
+ * @returns {Object} JSON-RPC 2.0 response
+ */
+app.post('/mcp', async (req, res) => {
+    try {
+        const { method, params, id } = req.body;
+        log.mcp(`Request received: ${method || 'unknown'}`);
+        logUsage('request', { endpoint: '/mcp', method });
+        
+        let response = {
+            jsonrpc: "2.0",
+            id: id
+        };
+
+        switch (method) {
+            case "initialize":
+                log.mcp('Initialize request - sending server capabilities');
+                response.result = {
+                    protocolVersion: "2024-11-05",
+                    capabilities: { tools: {} },
+                    serverInfo: {
+                        name: "OpenFDA Drug Information MCP Server",
+                        version: "2.0.0",
+                        description: "FDA drug information with shortages, recalls, and labels"
+                    }
+                };
+                break;
+
+            case "ping":
+                log.mcp('Ping received - responding with empty object');
+                response.result = {};
+                break;
+
+            case "tools/list":
+                log.mcp(`Tools list requested - sending ${TOOL_DEFINITIONS.length} tool definitions`);
+                response.result = { tools: TOOL_DEFINITIONS };
+                break;
+
+            case "tools/call":
+                const { name, arguments: args } = params;
+                log.mcp(`Tool call: ${name}`);
+                
+                response.result = await handleToolCall(name, args);
+                break;
+
+            default:
+                log.warn('mcp', `Unknown method: ${method}`);
+                response.error = {
+                    code: -32601,
+                    message: `Unknown method: ${method}`
+                };
+        }
+
+        res.json(response);
+        
+    } catch (error) {
+        log.error('mcp', `Request processing failed: ${error.message}`);
+        
+        // Check if this is a user-friendly error from tool execution
+        let errorResponse = {
+            code: -32603,
+            message: "We encountered an issue processing your request. Please try again in a moment.",
+            suggestions: [
+                "Check your internet connection",
+                "Verify the drug name is spelled correctly", 
+                "Try again in a few moments",
+                "Contact support if the issue persists"
+            ],
+            support: "https://github.com/zesty-genius128/Certus_server/issues"
+        };
+        
+        // If it's a structured error from tool execution, use that info
+        if (error.userFriendly) {
+            errorResponse.message = error.message;
+            errorResponse.suggestions = error.suggestions;
+            errorResponse.tool_name = error.tool_name;
+        }
+        
+        // Add technical details in development
+        if (process.env.NODE_ENV === 'development') {
+            errorResponse.technical_details = error.technical_details || error.message;
+        }
+        
+        res.status(500).json({
+            jsonrpc: "2.0",
+            id: req.body?.id || null,
+            error: errorResponse
+        });
+    }
+});
+
+/**
+ * Handle individual tool calls with comprehensive error handling
+ * @param {string} name - Tool name to execute
+ * @param {Object} args - Tool arguments
+ * @returns {Object} Tool execution result or error
+ */
+async function handleToolCall(name, args) {
+    try {
+        let result;
+        const drugName = args.drug_name || args.drug_identifier || 'unknown';
+        
+        switch (name) {
+            case "search_drug_shortages":
+                log.tool(name, drugName, `limit: ${args.limit || 10}`);
+                result = await searchDrugShortages(args.drug_name, args.limit || 10);
+                break;
+                
+            case "get_medication_profile":
+                log.tool(name, drugName, `type: ${args.identifier_type || 'openfda.generic_name'}`);
+                result = await getMedicationProfile(args.drug_identifier, args.identifier_type || "openfda.generic_name");
+                break;
+                
+            case "search_drug_recalls":
+                log.tool(name, drugName, `limit: ${args.limit || 10}`);
+                result = await searchDrugRecalls(args.drug_name, args.limit || 10);
+                break;
+                
+            case "get_drug_label_info":
+                log.tool(name, drugName, `type: ${args.identifier_type || 'openfda.generic_name'}`);
+                result = await fetchDrugLabelInfo(args.drug_identifier, args.identifier_type || "openfda.generic_name");
+                break;
+                
+            case "analyze_drug_shortage_trends":
+                log.tool(name, drugName, `months: ${args.months_back || 12}`);
+                result = await analyzeDrugShortageTrends(args.drug_name, args.months_back || 12);
+                break;
+                
+            case "batch_drug_analysis":
+                if (args.drug_list.length > 25) {
+                    throw new Error("Maximum 25 drugs per batch");
+                }
+                log.tool(name, `${args.drug_list.length} drugs`, `trends: ${args.include_trends || false}`);
+                result = await batchDrugAnalysis(args.drug_list, args.include_trends || false);
+                break;
+            case "search_adverse_events":
+                log.tool(name, drugName, `limit: ${args.limit || 5}, detailed: ${args.detailed || false}`);
+                result = await searchAdverseEvents(args.drug_name, args.limit || 5, args.detailed || false);
+                break;
+                
+            case "search_serious_adverse_events":
+                log.tool(name, drugName, `limit: ${args.limit || 5}, detailed: ${args.detailed || false}`);
+                result = await searchSeriousAdverseEvents(args.drug_name, args.limit || 5, args.detailed || false);
+                break;
+                
+            default:
+                throw new Error(`Tool '${name}' is not available. Available tools: ${TOOL_DEFINITIONS.map(t => t.name).join(', ')}`);
+        }
+        
+        log.tool(name, drugName, 'completed successfully');
+        return {
+            content: [
+                {
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }
+            ]
+        };
+        
+    } catch (toolError) {
+        log.error('tool', `${name} failed: ${toolError.message}`);
+        
+        // Provide user-friendly error message based on error type
+        let userMessage = "Unable to complete your request right now.";
+        let suggestions = ["Try again in a moment", "Check your internet connection"];
+        
+        if (toolError.message.includes('drug_name')) {
+            userMessage = "Please provide a valid drug name to search for.";
+            suggestions = ["Check the spelling of the drug name", "Try using the generic name instead of brand name", "Examples: insulin, metformin, aspirin"];
+        } else if (toolError.message.includes('timeout') || toolError.message.includes('network')) {
+            userMessage = "The FDA database is temporarily unavailable.";
+            suggestions = ["Try again in a few minutes", "Check your internet connection", "The FDA servers may be experiencing high traffic"];
+        } else if (toolError.message.includes('404') || toolError.message.includes('not found')) {
+            userMessage = `No information found for this drug. This may mean the drug has no ${name.includes('shortage') ? 'shortages' : name.includes('recall') ? 'recalls' : name.includes('adverse') ? 'adverse events' : 'data'} on record.`;
+            suggestions = ["Try a different spelling", "Use the generic drug name", "Check if the drug is FDA-approved"];
+        }
+        
+        // Create structured error for better handling
+        const structuredError = new Error(userMessage);
+        structuredError.userFriendly = true;
+        structuredError.suggestions = suggestions;
+        structuredError.technical_details = toolError.message;
+        structuredError.tool_name = name;
+        throw structuredError;
+    }
+}
+
+
+/**
+ * Global error handling middleware
+ */
+app.use((error, req, res, next) => {
+    log.error('express', `Unhandled error: ${error.message}`);
+    if (!res.headersSent) {
+        res.status(500).json({
+            error: 'Service temporarily unavailable',
+            message: 'We are experiencing technical difficulties. Please try again in a few moments.',
+            suggestions: [
+                "Try your request again in a few minutes",
+                "Check if the service is operational",
+                "Contact support if the issue continues"
+            ],
+            support: "https://github.com/zesty-genius128/Certus_server/issues",
+            technical_details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+/**
+ * 404 handler for unknown routes
+ */
+app.use((req, res) => {
+    log.warn('express', `404 - Unknown route: ${req.path}`);
+    if (!res.headersSent) {
+        res.status(404).json({
+            error: 'Page not found',
+            message: `The endpoint '${req.path}' does not exist on this server.`,
+            suggestions: [
+                "Check the URL spelling",
+                "Use one of the available endpoints below",
+                "Visit the main page at '/' for more information"
+            ],
+            available_endpoints: {
+                "/": "Server information and available tools",
+                "/health": "Server health status",
+                "/mcp": "MCP protocol endpoint for tool calls",
+                "/tools": "Available FDA drug information tools",
+                "/usage-stats": "Server usage analytics and insights",
+                "/cache-stats": "Cache statistics and monitoring"
+            },
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+/**
+ * Start the server and configure graceful shutdown
+ */
+app.listen(PORT, '0.0.0.0', () => {
+    log.server(`OpenFDA MCP Server running on port ${PORT}`);
+    log.server(`Health check: http://localhost:${PORT}/health`);
+    log.server(`MCP endpoint: http://localhost:${PORT}/mcp`);
+    log.server(`Tools endpoint: http://localhost:${PORT}/tools`);  
+    log.server(`Info: http://localhost:${PORT}/`);
+    log.server(`Available tools: ${TOOL_DEFINITIONS.length} FDA drug information tools`);
+    log.server('Architecture: HTTP server with stdio transport bridge compatibility');
+    log.server('Optimized for minimal post-processing and raw API data');
+    
+    console.log(`\nAvailable Tools:`);
+    TOOL_DEFINITIONS.forEach((tool, index) => {
+        console.log(`   ${index + 1}. ${tool.name} - ${tool.description.split('.')[0]}`);
+    });
+});
+
+/**
+ * Graceful shutdown handlers
+ */
+process.on('SIGTERM', () => {
+    log.server('SIGTERM received, shutting down gracefully');
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    log.server('SIGINT received, shutting down gracefully');
+    process.exit(0);
+});

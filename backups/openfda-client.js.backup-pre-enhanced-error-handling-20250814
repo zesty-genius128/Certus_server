@@ -45,150 +45,6 @@ function validateDrugName(drugName, context = "drug information") {
 }
 
 /**
- * Enhanced FDA API error classification system
- * Provides intelligent error handling with actionable user guidance
- * @param {Error} error - The caught error object
- * @param {Response} response - The HTTP response object (if available)
- * @param {string} url - The FDA API URL that was called
- * @returns {Object} - Classified error with user guidance
- */
-function classifyFDAError(error, response, url) {
-    const classification = {
-        type: 'unknown',
-        userMessage: 'Unable to complete request',
-        shouldRetry: false,
-        retryDelay: null,
-        suggestions: [],
-        technicalDetails: error?.message || 'Unknown error'
-    };
-    
-    // FDA Server Issues (should retry)
-    if (response && [500, 502, 503, 504].includes(response.status)) {
-        classification.type = 'fda_server_error';
-        classification.userMessage = 'FDA database is temporarily unavailable';
-        classification.shouldRetry = true;
-        classification.retryDelay = 30000; // 30 seconds
-        classification.suggestions = [
-            'Try again in 30 seconds',
-            'FDA servers may be under maintenance',
-            'Check FDA status at open.fda.gov'
-        ];
-    }
-    // No data found (don't retry, normal result)
-    else if (response && response.status === 404) {
-        classification.type = 'no_data_found';
-        classification.userMessage = 'No information found for this medication';
-        classification.shouldRetry = false;
-        classification.suggestions = [
-            'Try the generic drug name instead of brand name',
-            'Check the spelling of the medication name',
-            'Verify the medication is FDA-approved',
-            'Example: use "metformin" instead of "Glucophage"'
-        ];
-    }
-    // Bad request (don't retry, user error)
-    else if (response && response.status === 400) {
-        classification.type = 'bad_request';
-        classification.userMessage = 'Invalid medication name or search parameters';
-        classification.shouldRetry = false;
-        classification.suggestions = [
-            'Check the spelling of the medication name',
-            'Use only letters, numbers, and common punctuation',
-            'Try the generic name: "insulin" instead of "Humalog"',
-            'Avoid special characters and excessive punctuation'
-        ];
-    }
-    // Rate limiting (should retry after delay)
-    else if (response && response.status === 429) {
-        classification.type = 'rate_limited';
-        classification.userMessage = 'FDA API request limit exceeded';
-        classification.shouldRetry = true;
-        classification.retryDelay = 60000; // 1 minute
-        classification.suggestions = [
-            'Wait 1 minute before trying again',
-            'Consider using an FDA API key for higher limits',
-            'Reduce the number of simultaneous requests'
-        ];
-    }
-    // Network/timeout issues (should retry)
-    else if (error && (error.message.includes('timeout') || error.message.includes('ENOTFOUND') || error.message.includes('ECONNREFUSED'))) {
-        classification.type = 'network_error';
-        classification.userMessage = 'Network connection issue';
-        classification.shouldRetry = true;
-        classification.retryDelay = 5000; // 5 seconds
-        classification.suggestions = [
-            'Check your internet connection',
-            'Try again in a few moments',
-            'FDA servers may be temporarily unreachable'
-        ];
-    }
-    
-    return classification;
-}
-
-/**
- * Enhanced API request with intelligent retry logic
- * Automatically retries appropriate errors with exponential backoff
- * @param {string} url - FDA API endpoint URL
- * @param {URLSearchParams} params - Query parameters
- * @param {number} maxRetries - Maximum number of retry attempts
- * @returns {Promise<Object>} - API response or classified error
- */
-async function enhancedFDARequest(url, params, maxRetries = 2) {
-    const fullUrl = `${url}?${params}`;
-    
-    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
-        try {
-            const response = await fetch(fullUrl, {
-                timeout: 15000,
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'OpenFDA-MCP-Client/2.0-Enhanced'
-                }
-            });
-            
-            if (response.ok) {
-                return await response.json();
-            }
-            
-            // Classify the HTTP error
-            const errorClass = classifyFDAError(null, response, fullUrl);
-            
-            // If shouldn't retry or last attempt, throw classified error
-            if (!errorClass.shouldRetry || attempt > maxRetries) {
-                const enhancedError = new Error(errorClass.userMessage);
-                enhancedError.classification = errorClass;
-                enhancedError.httpStatus = response.status;
-                enhancedError.attempt = attempt;
-                throw enhancedError;
-            }
-            
-            // Wait before retry with exponential backoff
-            const delay = errorClass.retryDelay * Math.pow(1.5, attempt - 1);
-            console.log(`FDA API error ${response.status}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries + 1})`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            
-        } catch (error) {
-            const errorClass = classifyFDAError(error, null, fullUrl);
-            
-            // If shouldn't retry or last attempt, throw classified error
-            if (!errorClass.shouldRetry || attempt > maxRetries) {
-                const enhancedError = new Error(errorClass.userMessage);
-                enhancedError.classification = errorClass;
-                enhancedError.originalError = error;
-                enhancedError.attempt = attempt;
-                throw enhancedError;
-            }
-            
-            // Wait before retry with exponential backoff
-            const delay = errorClass.retryDelay * Math.pow(1.5, attempt - 1);
-            console.log(`FDA API network error, retrying in ${delay}ms (attempt ${attempt}/${maxRetries + 1})`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
-    }
-}
-
-/**
  * Normalize identifier type to ensure openFDA compatibility
  * This fixes the LibreChat identifier mismatch issue
  */
@@ -334,35 +190,35 @@ async function getCachedOrFetch(cacheKey, fetchFunction, ttlMinutes) {
 }
 
 /**
- * Enhanced API request handler with intelligent error handling
- * Replaces the old makeRequest function with retry logic and user-friendly errors
+ * Generic API request handler
  */
 async function makeRequest(url, params) {
     try {
-        const response = await enhancedFDARequest(url, params);
-        return response;
-    } catch (error) {
-        // Handle enhanced errors with classification
-        if (error.classification) {
-            return {
-                error: error.message,
-                error_type: error.classification.type,
-                suggestions: error.classification.suggestions,
-                retry_recommended: error.classification.shouldRetry,
-                technical_details: error.classification.technicalDetails,
-                endpoint: url,
-                timestamp: new Date().toISOString()
-            };
+        const response = await fetch(`${url}?${params}`, {
+            timeout: 15000,
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'OpenFDA-MCP-Client/2.0'
+            }
+        });
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                return { 
+                    results: [], 
+                    meta: { results: { total: 0 } },
+                    error: 'No results found',
+                    status: 404 
+                };
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
-        // Fallback for unexpected errors
+
+        return await response.json();
+    } catch (error) {
         return {
-            error: error.message || 'Unknown error occurred',
-            error_type: 'unknown',
-            suggestions: ['Try again in a few moments', 'Check your internet connection'],
-            retry_recommended: false,
-            endpoint: url,
-            timestamp: new Date().toISOString()
+            error: error.message,
+            endpoint: url
         };
     }
 }
@@ -1087,20 +943,16 @@ export async function healthCheck() {
     for (const test of testSearches) {
         const endpoint_name = test.endpoint.split('/').pop().replace('.json', '');
         try {
-            const response = await enhancedFDARequest(test.endpoint, test.params, 1); // Single retry for health checks
+            const response = await fetch(`${test.endpoint}?${test.params}`, { timeout: 5000 });
             results[endpoint_name] = {
-                status: 'healthy',
-                available: true,
-                response_time: 'normal'
+                status: response.status,
+                available: response.status === 200 || response.status === 404
             };
         } catch (error) {
-            const classification = error.classification || { type: 'unknown', userMessage: error.message };
             results[endpoint_name] = {
                 status: 'error',
                 available: false,
-                error: classification.userMessage,
-                error_type: classification.type,
-                retry_recommended: classification.shouldRetry
+                error: error.message
             };
         }
     }
