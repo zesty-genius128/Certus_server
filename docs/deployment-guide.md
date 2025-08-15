@@ -12,8 +12,17 @@ Complete guide for deploying your own Certus MCP Server.
 
 ### Quick Start
 
+For healthcare environments (recommended - no root privileges required):
 ```bash
-docker run -d -p 443:443 \
+docker run -d -p 3000:443 \
+  --name certus-server \
+  --restart unless-stopped \
+  ghcr.io/zesty-genius128/certus_server:latest
+```
+
+For production with port 443 (requires root/sudo):
+```bash
+sudo docker run -d -p 443:443 \
   --name certus-server \
   --restart unless-stopped \
   ghcr.io/zesty-genius128/certus_server:latest
@@ -63,14 +72,15 @@ services:
 # Check container status
 docker ps
 
-# Check health
-curl http://localhost:443/health
+# Check health (adjust port based on your deployment)
+curl http://localhost:3000/health    # For healthcare environment deployment
+curl http://localhost:443/health     # For production deployment
 
 # View logs
 docker logs certus-server
 
-# Test drug search
-curl -X POST http://localhost:443/mcp \
+# Test drug search (adjust port as needed)
+curl -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -308,9 +318,18 @@ systemctl status certus-server
 
 ## Configuration After Deployment
 
-### Update Claude Desktop Config
+### Connect Claude Desktop (Tested Working Method)
 
-Replace `your-server.com` with your actual domain:
+**Claude Desktop Configuration File Method:**
+
+1. Edit your Claude Desktop config file:
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. Add your server configuration:
+
+For HTTPS deployment:
 
 ```json
 {
@@ -323,18 +342,23 @@ Replace `your-server.com` with your actual domain:
 }
 ```
 
-For HTTP (development only):
+For local development (HTTP):
 
 ```json
 {
   "mcpServers": {
     "Certus": {
       "command": "npx",
-      "args": ["mcp-remote", "http://your-server.com:3000/mcp", "--allow-http"]
+      "args": ["mcp-remote", "http://localhost:3000/mcp"]
     }
   }
 }
 ```
+
+1. Restart Claude Desktop completely
+2. Look for the hammer icon in the chat input to confirm connection
+
+**Note**: This method has been tested and confirmed working with our server implementation.
 
 ### Verify Deployment
 
