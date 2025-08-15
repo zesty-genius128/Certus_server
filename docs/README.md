@@ -1,54 +1,27 @@
 # Documentation
 
-Detailed documentation for Certus OpenFDA MCP Server.
+Basic documentation for Certus OpenFDA MCP Server.
 
-## Quick Navigation
-
-### [API Reference](api-reference.md)
-
-Complete API documentation for all 8 FDA drug information tools including parameters, examples, and response formats.
-
-### [Healthcare Professional Guide](healthcare-guide.md)
-
-Specialized guide for medical professionals, pharmacists, and healthcare organizations integrating FDA drug information into clinical workflows.
+## Available Guides
 
 ### [Deployment Guide](deployment-guide.md)
-
-Complete guide for deploying your own Certus server including Docker, Railway, self-hosted, and Proxmox deployment options.
-
-### [Testing and Validation Guide](testing-guide.md)
-
-Comprehensive testing documentation including unit tests, MCP inspector usage, API testing, and deployment validation.
-
-### [Troubleshooting Guide](troubleshooting-guide.md)
-
-Detailed troubleshooting guide covering common issues, debug commands, performance problems, and error resolution.
+How to deploy and set up your own Certus server using Docker or manual installation.
 
 ### [Configuration Guide](configuration-guide.md)
+Basic configuration options including environment variables, FDA API keys, and Docker setup.
 
-Complete configuration reference including environment variables, caching behavior, security settings, and production deployment.
+### [Testing Guide](testing-guide.md)
+Essential testing commands to verify your server is working correctly.
 
-### [Developer Contributing Guide](developer-guide.md)
+### [API Reference](api-reference.md)
+Information about the OpenFDA APIs used and links to official FDA documentation.
 
-Comprehensive guide for developers who want to contribute to, extend, or understand the Certus codebase architecture.
+### [Troubleshooting Guide](troubleshooting-guide.md)
+Common issues and solutions for deployment and configuration problems.
 
-## Main Documentation
+## Quick Start
 
-Return to the [main README](../README.md) for:
-
-- Quick start guide
-- Live chatbot demo
-- Key features overview
-- System architecture
-- Available tools reference
-
-## Getting Started
-
-1. **New users**: Start with the main [README](../README.md)
-2. **Healthcare professionals**: See [Healthcare Professional Guide](healthcare-guide.md)
-3. **API developers**: Use [API Reference](api-reference.md)
-4. **Contributing developers**: Read [Developer Contributing Guide](developer-guide.md)
-5. **Deploying your own**: Follow [Deployment Guide](deployment-guide.md)
-6. **Testing setup**: Use [Testing Guide](testing-guide.md)
-7. **Having issues**: Check [Troubleshooting Guide](troubleshooting-guide.md)
-8. **Advanced setup**: Refer to [Configuration Guide](configuration-guide.md)
+1. **New to Certus?** Start with the main [README](../README.md)
+2. **Want to deploy?** Follow the [Deployment Guide](deployment-guide.md)
+3. **Need to configure?** Check the [Configuration Guide](configuration-guide.md)
+4. **Having issues?** See the [Troubleshooting Guide](troubleshooting-guide.md)
