@@ -337,7 +337,7 @@ const rateLimit = new Map();
 const rateLimitViolations = new Set(); // Track IPs that have been logged this window
 const RATE_LIMIT = {
     WINDOW_MS: 30 * 60 * 1000,  // 30 minute window
-    MAX_REQUESTS: 100           // 100 requests per 30 minutes per IP
+    MAX_REQUESTS: process.env.CI === 'true' ? 1000 : 100  // Higher limit for CI testing
 };
 
 app.use((req, res, next) => {
