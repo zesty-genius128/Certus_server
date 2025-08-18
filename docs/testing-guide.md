@@ -42,11 +42,8 @@ Run the comprehensive test suite:
 # Run unit tests (utility functions only)
 npm run test:unit
 
-# Run comprehensive tests (requires running server)
+# Run main test suite (unit tests)
 npm test
-
-# Test against specific server
-TEST_SERVER_URL=https://your-server.com npm test
 ```
 
 ## Basic Tool Testing

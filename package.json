@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node official-mcp-server.js",
     "dev": "NODE_ENV=development nodemon official-mcp-server.js",
-    "test": "node tests/comprehensive-test.js",
+    "test": "node --test tests/unit-tests.js",
     "test:unit": "node --test tests/unit-tests.js",
     "test:unit:local": "TEST_SERVER_URL=http://localhost:443 node --test tests/unit-tests.js",
     "test:unit:production": "TEST_SERVER_URL=https://certus.opensource.mieweb.org node --test tests/unit-tests.js",
@@ -16,7 +16,6 @@
     "inspect:remote": "npx @modelcontextprotocol/inspector https://certus-server-production.up.railway.app/mcp",
     "test:health": "curl https://certus.opensource.mieweb.org/health",
     "test:tools": "curl https://certus.opensource.mieweb.org/tools",
-    "test:comprehensive": "node tests/comprehensive-test.js",
     "build": "echo 'No build step required'"
   },
   "engines": {

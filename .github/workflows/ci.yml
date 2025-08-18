@@ -37,7 +37,7 @@ jobs:
         # Skip server integration tests in CI environment
         CI: true
         
-    - name: Run comprehensive tests
+    - name: Run unit tests
       run: npm run test
       
     - name: Verify server can start (non-privileged port)
