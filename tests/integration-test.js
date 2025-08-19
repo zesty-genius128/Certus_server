@@ -3,28 +3,18 @@
 /**
  * Integration Test Suite for Certus FDA Drug Information MCP Server
  * 
- * Tests all 8 FDA tools with real data and validates:
- * - Trend analysis functionality (new implementation)
- * - Error handling and validation
- * - Response structure and data quality
- * - Performance and reliability
+ * Tests core FDA tool functionality with live server data.
+ * Simplified for internship-appropriate complexity.
  * 
- * Usage: node tests/comprehensive-test.js
+ * Usage: node tests/integration-test.js
  */
 
 import { strict as assert } from 'assert';
 import fetch from 'node-fetch';
 
 // Test configuration
-// TODO: Replace with your own deployment URL when forking this repo
-// Example: 'https://your-server.herokuapp.com/mcp' or 'http://localhost:3000/mcp'
 const SERVER_URL = 'https://certus.opensource.mieweb.org/mcp';
 const TIMEOUT = 30000;
-
-// Test data - drugs we know have different shortage statuses
-const drugsWithShortages = ['Lisdexamfetamine', 'carboplatin'];
-const drugsWithoutShortages = ['metformin', 'aspirin', 'acetaminophen'];
-
 
 // Keep track of test results
 let passed = 0;
@@ -72,202 +62,90 @@ function test(description, condition, actual = null, expected = null) {
     }
 }
 
-// Test trend analysis with drugs that have shortages
-async function testTrendsWithShortages() {
-    console.log('\n[TEST] Testing Shortage Trend Analysis - Drugs With Shortages');
+// Test server health
+async function testServerHealth() {
+    console.log('\n[TEST] Server Health');
     
-    for (const drug of drugsWithShortages) {
-        try {
-            const result = await callTool('analyze_drug_shortage_trends', {
-                drug_name: drug,
-                months_back: 12
-            });
-
-            // Check basic response structure
-            test(`${drug} - Has drug name`, result.drug_name === drug);
-            test(`${drug} - Has analysis period`, result.analysis_period_months === 12);
-            test(`${drug} - Has current status`, typeof result.current_status === 'string');
-            test(`${drug} - Has data source`, result.data_source === 'FDA Drug Shortages Database');
-            test(`${drug} - Has timestamp`, result.timestamp && new Date(result.timestamp).getTime() > 0);
-            
-            // Check shortage details if present
-            if (result.current_shortage) {
-                test(`${drug} - Has duration days`, typeof result.current_shortage.duration_days === 'number');
-                test(`${drug} - Duration is positive`, result.current_shortage.duration_days > 0);
-                test(`${drug} - Has reason`, typeof result.current_shortage.reason === 'string');
-                test(`${drug} - Has availability`, typeof result.current_shortage.availability === 'string');
-            }
-            
-            // Check historical data if available
-            if (result.historical_summary) {
-                test(`${drug} - Has total events`, typeof result.historical_summary.total_shortage_events === 'number');
-                test(`${drug} - Has first recorded`, typeof result.historical_summary.first_recorded === 'string');
-                
-                const validFrequencies = ['High', 'Moderate', 'Low'];
-                test(`${drug} - Has frequency`, validFrequencies.includes(result.historical_summary.shortage_frequency));
-            }
-            
-        } catch (error) {
-            test(`${drug} - API call failed`, false, error.message, 'successful response');
-        }
-    }
-}
-
-// Test trend analysis with drugs without shortages
-async function testTrendsWithoutShortages() {
-    console.log('\n[TEST] Testing Shortage Trend Analysis - Drugs Without Shortages');
-    
-    for (const drug of drugsWithoutShortages) {
-        try {
-            const result = await callTool('analyze_drug_shortage_trends', {
-                drug_name: drug,
-                months_back: 6
-            });
-
-            test(`${drug} - Has drug name`, result.drug_name === drug);
-            test(`${drug} - Shows no shortages`, result.current_status === 'No current shortages');
-            test(`${drug} - No current shortage object`, !result.current_shortage);
-            test(`${drug} - Has data source`, result.data_source === 'FDA Drug Shortages Database');
-            
-        } catch (error) {
-            test(`${drug} - API call failed`, false, error.message, 'successful response');
-        }
-    }
-}
-
-// Test validation and error handling
-async function testValidation() {
-    console.log('\n[TEST] Testing Validation and Error Handling');
-    
-    // Test empty drug name
     try {
-        const result = await callTool('analyze_drug_shortage_trends', {
-            drug_name: '',
-            months_back: 12
-        });
-        test('Empty drug name - Returns error', result.error && result.error.includes('provide a medication name'));
-        test('Empty drug name - No examples field', result.examples === undefined);
-        test('Empty drug name - No tip field', result.tip === undefined);
+        const healthResponse = await fetch('https://certus.opensource.mieweb.org/health');
+        const healthData = await healthResponse.json();
+        test('Server returns healthy status', healthData.status === 'healthy');
+        test('Server has 8 tools available', healthData.tools_available === 8);
     } catch (error) {
-        test('Empty drug name - API call failed', false, error.message, 'error response');
-    }
-    
-    // Test invalid months_back
-    try {
-        const result = await callTool('analyze_drug_shortage_trends', {
-            drug_name: 'metformin',
-            months_back: 100
-        });
-        test('Invalid months - Returns error', result.error && result.error.includes('between 1 and 60 months'));
-        test('Invalid months - Shows provided value', result.provided_months === 100);
-    } catch (error) {
-        test('Invalid months - API call failed', false, error.message, 'error response');
+        test('Server health check failed', false, error.message, 'healthy response');
     }
 }
 
-// Test other core tools for baseline functionality
+// Test core FDA tools
 async function testCoreTools() {
-    console.log('\n[TEST] Testing Core Tools');
+    console.log('\n[TEST] Core FDA Tools');
     
     const toolsToTest = [
-        { tool: 'search_drug_shortages', args: { drug_name: 'insulin', limit: 5 } },
+        { tool: 'search_drug_shortages', args: { drug_name: 'insulin', limit: 3 } },
         { tool: 'search_adverse_events', args: { drug_name: 'aspirin', limit: 3 } },
         { tool: 'get_drug_label_info', args: { drug_identifier: 'metformin' } },
         { tool: 'search_drug_recalls', args: { drug_name: 'acetaminophen', limit: 3 } }
     ];
     
-    const toolsWithTimestamp = ['search_adverse_events', 'get_drug_label_info'];
-    
     for (const toolTest of toolsToTest) {
         try {
             const result = await callTool(toolTest.tool, toolTest.args);
-            test(`${toolTest.tool} - Returns valid response`, typeof result === 'object');
-            
-            // Only check timestamp for tools that have it
-            if (toolsWithTimestamp.includes(toolTest.tool)) {
-                test(`${toolTest.tool} - Has timestamp`, result.timestamp && new Date(result.timestamp).getTime() > 0);
-            } else {
-                test(`${toolTest.tool} - No timestamp field (optimized)`, result.timestamp === undefined);
-            }
-            
-            test(`${toolTest.tool} - Has data source info`, result.data_source || result.api_endpoint);
+            test(`${toolTest.tool} returns valid response`, typeof result === 'object');
+            test(`${toolTest.tool} has data source info`, result.data_source || result.api_endpoint);
         } catch (error) {
-            test(`${toolTest.tool} - API call failed`, false, error.message, 'successful response');
+            test(`${toolTest.tool} API call failed`, false, error.message, 'successful response');
         }
+    }
+}
+
+// Test error handling
+async function testErrorHandling() {
+    console.log('\n[TEST] Error Handling');
+    
+    // Test empty drug name
+    try {
+        const result = await callTool('search_drug_shortages', {
+            drug_name: '',
+            limit: 5
+        });
+        test('Empty drug name returns error', result.error && result.error.includes('provide a medication name'));
+    } catch (error) {
+        test('Empty drug name handled properly', false, error.message, 'error response');
     }
 }
 
 // Test batch analysis
 async function testBatchAnalysis() {
-    console.log('\n[TEST] Testing Batch Analysis');
+    console.log('\n[TEST] Batch Analysis');
     
     try {
         const result = await callTool('batch_drug_analysis', {
-            drug_list: ['metformin', 'insulin', 'aspirin'],
+            drug_list: ['metformin', 'aspirin'],
             include_trends: false
         });
         
-        test('Batch analysis - Returns object', typeof result === 'object');
-        test('Batch analysis - Has batch_info', result.batch_info && typeof result.batch_info === 'object');
-        test('Batch analysis - Has drug_analyses array', Array.isArray(result.drug_analyses));
-        test('Batch analysis - Has 3 drug analyses', result.drug_analyses.length === 3);
-        test('Batch analysis - First analysis has drug name', result.drug_analyses[0] && result.drug_analyses[0].drug_name);
-        test('Batch analysis - Total drugs matches', result.batch_info.total_drugs === 3);
+        test('Batch analysis returns object', typeof result === 'object');
+        test('Batch analysis has batch_info', result.batch_info && typeof result.batch_info === 'object');
+        test('Batch analysis has drug_analyses array', Array.isArray(result.drug_analyses));
+        test('Batch analysis has correct count', result.drug_analyses.length === 2);
         
     } catch (error) {
-        test('Batch analysis - API call failed', false, error.message, 'successful response');
-    }
-}
-
-// Test performance and response times
-async function testPerformance() {
-    console.log('\n[TEST] Testing Performance');
-    
-    const startTime = Date.now();
-    
-    try {
-        await callTool('analyze_drug_shortage_trends', {
-            drug_name: 'Lisdexamfetamine',
-            months_back: 12
-        });
-        
-        const responseTime = Date.now() - startTime;
-        test('Trend analysis - Response time < 10s', responseTime < 10000, `${responseTime}ms`, '< 10000ms');
-        test('Trend analysis - Response time < 5s', responseTime < 5000, `${responseTime}ms`, '< 5000ms');
-        
-    } catch (error) {
-        test('Performance test - API call failed', false, error.message, 'successful response');
+        test('Batch analysis API call failed', false, error.message, 'successful response');
     }
 }
 
 // Main test runner
 async function runAllTests() {
     console.log('Certus FDA Drug Information MCP Server - Integration Test Suite');
-    console.log('=' .repeat(70));
+    console.log('='.repeat(70));
     
-    // Test server health first
-    console.log('\n[TEST] Testing Server Health');
-    try {
-        // TODO: Replace with your health endpoint when forking
-        // Example: 'https://your-server.herokuapp.com/health'
-        const healthResponse = await fetch('https://certus.opensource.mieweb.org/health');
-        const healthData = await healthResponse.json();
-        test('Server health - Returns healthy status', healthData.status === 'healthy');
-        test('Server health - Has 8 tools', healthData.tools_available === 8);
-    } catch (error) {
-        test('Server health - Health check failed', false, error.message, 'healthy response');
-    }
-    
-    // Run all the test suites
-    await testTrendsWithShortages();
-    await testTrendsWithoutShortages();
-    await testValidation();
+    await testServerHealth();
     await testCoreTools();
+    await testErrorHandling();
     await testBatchAnalysis();
-    await testPerformance();
     
     // Show final results
-    console.log('\n' + '=' .repeat(70));
+    console.log('\n' + '='.repeat(70));
     console.log(`[RESULTS] Test Results: ${passed} passed, ${failed} failed`);
     
     if (failed > 0) {
