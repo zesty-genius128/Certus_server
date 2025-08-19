@@ -9,8 +9,8 @@
  * - Custom: Set TEST_SERVER_URL environment variable to test your deployment
  * 
  * Examples:
- * npm run test                                        # Test localhost
- * TEST_SERVER_URL=https://your-server.com npm test   # Test your deployment
+ * npm run test:unit                                    # Test localhost
+ * TEST_SERVER_URL=https://your-server.com npm test:unit # Test your deployment
  */
 
 import { test, describe } from 'node:test';
