@@ -185,8 +185,8 @@ jobs:
   integration-test:
     name: Integration Test with Live Server
     runs-on: ubuntu-latest
-    # Only run on main branch to avoid excessive API calls
-    if: github.ref == 'refs/heads/main'
+    # Run on main branch and test branch for testing
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test-workflow-simplification'
     
     steps:
     - name: Checkout code
