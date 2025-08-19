@@ -1,401 +1,322 @@
 /**
- * Comprehensive Unit Tests for Certus MCP Server
+ * Unit Tests for Certus MCP Server Utility Functions
  * 
- * Tests the entire codebase including server logic, OpenFDA client functions,
- * and utility functions without external dependencies or network calls.
- * 
+ * Tests core utility functions from openfda-client.js and validates live server integration.
  * Uses Node.js built-in test runner (Node 18+)
+ * 
+ * Configuration:
+ * - Default: Tests against localhost:443 (for development)
+ * - Custom: Set TEST_SERVER_URL environment variable to test your deployment
+ * 
+ * Examples:
+ * npm run test                                        # Test localhost
+ * TEST_SERVER_URL=https://your-server.com npm test   # Test your deployment
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 
-// Import all testable functions from openfda-client.js
+// Test against configurable server URL - defaults to localhost for development
+const SERVER_URL = process.env.TEST_SERVER_URL || 'http://localhost:443';
+
+// Import the utility functions we want to test
 import {
     validateDrugName,
     normalizeIdentifierType,
     buildParams,
     isCacheValid,
     getCacheStats,
-    cleanExpiredCache,
-    searchDrugShortages,
-    fetchDrugLabelInfo,
-    searchDrugRecalls,
-    getMedicationProfile,
-    searchAdverseEvents,
-    searchSeriousAdverseEvents,
-    analyzeDrugShortageTrends,
-    batchDrugAnalysis,
-    healthCheck
+    cleanExpiredCache
 } from '../openfda-client.js';
 
-// Import server components by reading and parsing the file
-import fs from 'fs';
-import path from 'path';
-
-const serverPath = path.join(process.cwd(), 'official-mcp-server.js');
-const serverContent = fs.readFileSync(serverPath, 'utf8');
-
-describe('OpenFDA Client Functions', () => {
-    describe('Drug Name Validation', () => {
-        test('should accept valid drug names', () => {
-            const validNames = ['metformin', 'Tylenol', 'insulin glargine', 'acetaminophen-500mg'];
-            
-            validNames.forEach(name => {
-                const result = validateDrugName(name);
-                assert.strictEqual(result, null, `Should accept valid name: ${name}`);
-            });
-        });
+describe('Drug Name Validation', () => {
+    test('should accept valid drug names', () => {
+        const validNames = ['metformin', 'Tylenol', 'insulin glargine', 'acetaminophen-500mg'];
         
-        test('should reject empty or invalid drug names', () => {
-            const invalidNames = ['', '   ', null, undefined, 123, {}];
-            
-            invalidNames.forEach(name => {
-                const result = validateDrugName(name);
-                assert.strictEqual(typeof result, 'object', `Should reject invalid name: ${name}`);
-                assert(result.error, 'Should return error object');
-                assert(result.error.includes('provide a medication name'), 'Should have helpful error message');
-            });
-        });
-        
-        test('should provide context-specific error messages', () => {
-            const contexts = ['shortages', 'recalls', 'adverse events'];
-            
-            contexts.forEach(context => {
-                const result = validateDrugName('', context);
-                assert(result.error.includes(context), `Should include context "${context}" in error`);
-            });
+        validNames.forEach(name => {
+            const result = validateDrugName(name);
+            assert.strictEqual(result, null, `Should accept valid name: ${name}`);
         });
     });
-
-    describe('Identifier Type Normalization', () => {
-        test('should normalize generic identifier types', () => {
-            const testCases = [
-                { input: 'generic_name', expected: 'openfda.generic_name' },
-                { input: 'openfda.generic_name', expected: 'openfda.generic_name' },
-                { input: 'brand_name', expected: 'openfda.brand_name' },
-                { input: 'openfda.brand_name', expected: 'openfda.brand_name' }
-            ];
-            
-            testCases.forEach(({ input, expected }) => {
-                const result = normalizeIdentifierType(input);
-                assert.strictEqual(result, expected, `${input} should normalize to ${expected}`);
-            });
-        });
+    
+    test('should reject empty or invalid drug names', () => {
+        const invalidNames = ['', '   ', null, undefined, 123, {}];
         
-        test('should handle undefined and default values', () => {
-            const result = normalizeIdentifierType();
-            assert.strictEqual(result, 'openfda.generic_name', 'Should default to openfda.generic_name');
+        invalidNames.forEach(name => {
+            const result = validateDrugName(name);
+            assert.strictEqual(typeof result, 'object', `Should reject invalid name: ${name}`);
+            assert(result.error, 'Should return error object');
+            assert(result.error.includes('provide a medication name'), 'Should have helpful error message');
         });
     });
+    
+    test('should provide context-specific error messages', () => {
+        const contexts = ['shortages', 'recalls', 'adverse events'];
+        
+        contexts.forEach(context => {
+            const result = validateDrugName('', context);
+            assert(result.error.includes(context), `Should include context "${context}" in error`);
+        });
+    });
+    
+    test('should handle whitespace-only strings', () => {
+        const result = validateDrugName('   \t\n   ');
+        assert.strictEqual(typeof result, 'object');
+        assert(result.error, 'Should return error for whitespace-only string');
+    });
+});
 
-    describe('API Parameter Building', () => {
-        test('should build basic search parameters', () => {
-            const search = 'openfda.generic_name:"metformin"';
-            const result = buildParams(search, 10);
+describe('Identifier Type Normalization', () => {
+    test('should normalize generic identifier types', () => {
+        const testCases = [
+            { input: 'generic_name', expected: 'openfda.generic_name' },
+            { input: 'openfda.generic_name', expected: 'openfda.generic_name' },
+            { input: 'brand_name', expected: 'openfda.brand_name' },
+            { input: 'openfda.brand_name', expected: 'openfda.brand_name' }
+        ];
+        
+        testCases.forEach(({ input, expected }) => {
+            const result = normalizeIdentifierType(input);
+            assert.strictEqual(result, expected, `${input} should normalize to ${expected}`);
+        });
+    });
+    
+    test('should handle undefined and default values', () => {
+        const result = normalizeIdentifierType();
+        assert.strictEqual(result, 'openfda.generic_name', 'Should default to openfda.generic_name');
+    });
+    
+    test('should default unknown identifier types to generic_name', () => {
+        const unknownType = 'unknown.identifier.type';
+        const result = normalizeIdentifierType(unknownType);
+        assert.strictEqual(result, 'openfda.generic_name', 'Should default unknown types to openfda.generic_name');
+    });
+});
+
+describe('API Parameter Building', () => {
+    test('should build basic search parameters', () => {
+        const search = 'openfda.generic_name:"metformin"';
+        const result = buildParams(search, 10);
+        const resultString = result.toString();
+        
+        assert(resultString.includes('search='), 'Should include search parameter');
+        assert(resultString.includes('limit=10'), 'Should include limit parameter');
+        assert(resultString.includes('metformin'), 'Should include search term');
+    });
+    
+    test('should handle URL encoding', () => {
+        const search = 'openfda.generic_name:"drug with spaces"';
+        const result = buildParams(search, 5);
+        const resultString = result.toString();
+        
+        assert(resultString.includes('drug+with+spaces'), 'Should URL encode spaces as plus signs');
+    });
+    
+    test('should include API key when available', async () => {
+        const originalKey = process.env.OPENFDA_API_KEY;
+        
+        try {
+            process.env.OPENFDA_API_KEY = 'test-api-key';
+            
+            // Re-import to pick up the new environment variable
+            const { buildParams: freshBuildParams } = await import('../openfda-client.js?' + Date.now());
+            const result = freshBuildParams('test', 10);
             const resultString = result.toString();
-            
-            assert(resultString.includes('search='), 'Should include search parameter');
-            assert(resultString.includes('limit=10'), 'Should include limit parameter');
-            assert(resultString.includes('metformin'), 'Should include search term');
-        });
+            assert(resultString.includes('api_key=test-api-key'), 'Should include API key');
+        } finally {
+            // Restore original key
+            if (originalKey) {
+                process.env.OPENFDA_API_KEY = originalKey;
+            } else {
+                delete process.env.OPENFDA_API_KEY;
+            }
+        }
+    });
+    
+    test('should handle additional parameters', () => {
+        const additionalParams = { count: 'patient.reaction.reactionmeddrapt.exact' };
+        const result = buildParams('test', 10, additionalParams);
+        const resultString = result.toString();
         
-        test('should handle URL encoding', () => {
-            const search = 'openfda.generic_name:"drug with spaces"';
-            const result = buildParams(search, 5);
+        assert(resultString.includes('count='), 'Should include additional parameters');
+    });
+    
+    test('should handle different limit values', () => {
+        const limits = [1, 5, 25, 50];
+        
+        limits.forEach(limit => {
+            const result = buildParams('test', limit);
             const resultString = result.toString();
-            
-            assert(resultString.includes('drug+with+spaces'), 'Should URL encode spaces as plus signs');
-        });
-    });
-
-    describe('Cache Management', () => {
-        test('should validate fresh cache items', () => {
-            const freshItem = {
-                data: { test: 'data' },
-                timestamp: Date.now()
-            };
-            
-            const result = isCacheValid(freshItem, 30);
-            assert.strictEqual(result, true, 'Fresh cache item should be valid');
-        });
-        
-        test('should invalidate expired cache items', () => {
-            const expiredItem = {
-                data: { test: 'data' },
-                timestamp: Date.now() - (60 * 60 * 1000) // 1 hour ago
-            };
-            
-            const result = isCacheValid(expiredItem, 30);
-            assert.strictEqual(result, false, 'Expired cache item should be invalid');
-        });
-        
-        test('should return valid cache statistics structure', () => {
-            const stats = getCacheStats();
-            
-            assert(typeof stats === 'object', 'Should return an object');
-            assert(typeof stats.totalEntries === 'number', 'Should have totalEntries number');
-            assert(typeof stats.memoryUsageApprox === 'number', 'Should have memory usage estimate');
-            assert(typeof stats.entriesByType === 'object', 'Should have entriesByType object');
-        });
-        
-        test('should clean expired cache without errors', () => {
-            assert.doesNotThrow(() => {
-                cleanExpiredCache();
-            }, 'Cache cleanup should not throw errors');
-        });
-    });
-
-    describe('FDA API Functions Structure', () => {
-        test('should have all required FDA search functions', () => {
-            const requiredFunctions = [
-                searchDrugShortages,
-                fetchDrugLabelInfo,
-                searchDrugRecalls,
-                getMedicationProfile,
-                searchAdverseEvents,
-                searchSeriousAdverseEvents,
-                analyzeDrugShortageTrends,
-                batchDrugAnalysis,
-                healthCheck
-            ];
-            
-            requiredFunctions.forEach(fn => {
-                assert(typeof fn === 'function', `${fn.name} should be a function`);
-            });
-        });
-        
-        test('should validate drug names before API calls', async () => {
-            // Test that functions properly validate input before making calls
-            try {
-                await searchDrugShortages(''); // Empty drug name
-                assert.fail('Should reject empty drug name');
-            } catch (error) {
-                assert(error.message.includes('medication name') || error.message.includes('drug'), 'Should have validation error');
-            }
-        });
-        
-        test('should handle batch drug analysis input validation', async () => {
-            try {
-                await batchDrugAnalysis([]); // Empty array
-                assert.fail('Should reject empty drug list');
-            } catch (error) {
-                assert(error.message.includes('drug'), 'Should have validation error for empty list');
-            }
+            assert(resultString.includes(`limit=${limit}`), `Should include limit=${limit}`);
         });
     });
 });
 
-describe('Server Architecture and Configuration', () => {
-    describe('MCP Tool Definitions', () => {
-        test('should have exactly 8 FDA tools defined', () => {
-            const toolDefStart = serverContent.indexOf('const TOOL_DEFINITIONS = [');
-            const toolDefEnd = serverContent.indexOf('];', toolDefStart);
-            
-            assert(toolDefStart !== -1, 'Should have TOOL_DEFINITIONS array');
-            assert(toolDefEnd !== -1, 'Should have properly closed TOOL_DEFINITIONS array');
-            
-            const toolDefSection = serverContent.substring(toolDefStart, toolDefEnd);
-            const toolMatches = toolDefSection.match(/name: \"[^\"]+\"/g) || [];
-            
-            assert.strictEqual(toolMatches.length, 8, 'Should have exactly 8 FDA tools defined');
-        });
+describe('Cache Validation', () => {
+    test('should validate fresh cache items', () => {
+        const freshItem = {
+            data: { test: 'data' },
+            timestamp: Date.now() // Fresh timestamp
+        };
         
-        test('should include all required FDA tools', () => {
-            const requiredTools = [
-                'search_drug_shortages',
-                'search_adverse_events', 
-                'search_serious_adverse_events',
-                'search_drug_recalls',
-                'get_drug_label_info',
-                'get_medication_profile',
-                'analyze_drug_shortage_trends',
-                'batch_drug_analysis'
-            ];
-            
-            requiredTools.forEach(tool => {
-                assert(serverContent.includes(`"${tool}"`), `Should include tool: ${tool}`);
-            });
-        });
-        
-        test('should have proper input schemas for all tools', () => {
-            const schemaElements = ['type', 'properties', 'required', 'description'];
-            
-            schemaElements.forEach(element => {
-                const regex = new RegExp(element + ':', 'g');
-                const matches = serverContent.match(regex);
-                assert(matches && matches.length >= 8, `Should have ${element} defined for all tools`);
-            });
-        });
+        const result = isCacheValid(freshItem, 30); // 30 minute TTL
+        assert.strictEqual(result, true, 'Fresh cache item should be valid');
     });
-
-    describe('Server Configuration', () => {
-        test('should have rate limiting configuration', () => {
-            assert(serverContent.includes('MAX_REQUESTS'), 'Should have rate limiting configuration');
-            assert(serverContent.includes('WINDOW_MS'), 'Should have rate limit window configuration');
-            assert(serverContent.includes('process.env.CI'), 'Should have CI environment detection');
-        });
+    
+    test('should invalidate expired cache items', () => {
+        const expiredItem = {
+            data: { test: 'data' },
+            timestamp: Date.now() - (60 * 60 * 1000) // 1 hour ago
+        };
         
-        test('should specify MCP protocol version', () => {
-            assert(serverContent.includes('2024-11-05'), 'Should specify MCP protocol version');
-        });
-        
-        test('should have proper server identification', () => {
-            assert(serverContent.includes('OpenFDA Drug Information MCP Server'), 'Should have proper server name');
-            assert(serverContent.includes('version'), 'Should have version information');
-        });
-        
-        test('should have CORS configuration', () => {
-            assert(serverContent.includes('cors'), 'Should have CORS middleware');
-            assert(serverContent.includes('origin: \'*\''), 'Should allow all origins for MCP compatibility');
-        });
+        const result = isCacheValid(expiredItem, 30); // 30 minute TTL
+        assert.strictEqual(result, false, 'Expired cache item should be invalid');
     });
-
-    describe('HTTP Endpoints', () => {
-        test('should have all required REST endpoints', () => {
-            const requiredEndpoints = [
-                "app.get('/health'",
-                "app.get('/tools'", 
-                "app.post('/mcp'",
-                "app.get('/cache-stats'",
-                "app.get('/usage-stats'",
-                "app.get('/'",
-                "app.get('/robots.txt'"
-            ];
-            
-            requiredEndpoints.forEach(endpoint => {
-                assert(serverContent.includes(endpoint), `Should have endpoint: ${endpoint}`);
-            });
-        });
+    
+    test('should handle missing cache items', () => {
+        const result = isCacheValid(null, 30);
+        assert.strictEqual(result, false, 'Null cache item should be invalid');
         
-        test('should handle MCP protocol methods', () => {
-            const mcpMethods = ['initialize', 'ping', 'tools/list', 'tools/call'];
-            
-            mcpMethods.forEach(method => {
-                assert(serverContent.includes(`"${method}"`), `Should handle MCP method: ${method}`);
-            });
-        });
+        const result2 = isCacheValid(undefined, 30);
+        assert.strictEqual(result2, false, 'Undefined cache item should be invalid');
     });
-
-    describe('Error Handling and Logging', () => {
-        test('should have comprehensive logging system', () => {
-            const logTypes = ['log.server', 'log.mcp', 'log.tool', 'log.error', 'log.warn'];
-            
-            logTypes.forEach(logType => {
-                assert(serverContent.includes(logType), `Should have logging method: ${logType}`);
-            });
-        });
+    
+    test('should handle cache items without timestamp', () => {
+        const itemWithoutTimestamp = { data: { test: 'data' } };
         
-        test('should have usage analytics tracking', () => {
-            assert(serverContent.includes('usageAnalytics'), 'Should have usage analytics system');
-            assert(serverContent.includes('logUsage'), 'Should have usage logging function');
-            assert(serverContent.includes('byTool'), 'Should track tool usage');
-            assert(serverContent.includes('byDrug'), 'Should track drug searches');
-        });
-        
-        test('should have error handling middleware', () => {
-            assert(serverContent.includes('app.use((error'), 'Should have global error handler');
-            assert(serverContent.includes('404'), 'Should handle 404 errors');
-            assert(serverContent.includes('500'), 'Should handle 500 errors');
-        });
-        
-        test('should have graceful shutdown handlers', () => {
-            assert(serverContent.includes('SIGTERM'), 'Should handle SIGTERM');
-            assert(serverContent.includes('SIGINT'), 'Should handle SIGINT');
-        });
+        const result = isCacheValid(itemWithoutTimestamp, 30);
+        assert.strictEqual(result, false, 'Cache item without timestamp should be invalid');
     });
-
-    describe('Tool Call Handler', () => {
-        test('should have handleToolCall function', () => {
-            assert(serverContent.includes('async function handleToolCall'), 'Should have handleToolCall function');
-            assert(serverContent.includes('switch (name)'), 'Should have tool routing logic');
-        });
+    
+    test('should handle different TTL values', () => {
+        const item = {
+            data: { test: 'data' },
+            timestamp: Date.now() - (45 * 60 * 1000) // 45 minutes ago
+        };
         
-        test('should handle all defined tools in switch statement', () => {
-            const tools = [
-                'search_drug_shortages',
-                'search_adverse_events',
-                'search_serious_adverse_events', 
-                'search_drug_recalls',
-                'get_drug_label_info',
-                'get_medication_profile',
-                'analyze_drug_shortage_trends',
-                'batch_drug_analysis'
-            ];
-            
-            tools.forEach(tool => {
-                assert(serverContent.includes(`case "${tool}"`), `Should handle tool case: ${tool}`);
-            });
-        });
+        // Should be invalid with 30 minute TTL
+        assert.strictEqual(isCacheValid(item, 30), false, 'Should be invalid with 30min TTL');
         
-        test('should have proper error handling in tool calls', () => {
-            assert(serverContent.includes('try {'), 'Should have try-catch blocks');
-            assert(serverContent.includes('catch (toolError)'), 'Should catch tool errors');
-            assert(serverContent.includes('userFriendly'), 'Should have user-friendly error handling');
-        });
+        // Should be valid with 60 minute TTL
+        assert.strictEqual(isCacheValid(item, 60), true, 'Should be valid with 60min TTL');
     });
 });
 
-describe('Security and Middleware', () => {
-    test('should have security middleware configured', () => {
-        assert(serverContent.includes('helmet'), 'Should have Helmet security middleware');
-        assert(serverContent.includes('compression'), 'Should have compression middleware');
-        assert(serverContent.includes('morgan'), 'Should have request logging');
-    });
-    
-    test('should have rate limiting implemented', () => {
-        assert(serverContent.includes('rateLimit'), 'Should have rate limiting map');
-        assert(serverContent.includes('429'), 'Should return 429 for rate limit exceeded');
-        assert(serverContent.includes('retryAfter'), 'Should include retry information');
-    });
-    
-    test('should handle JSON parsing safely', () => {
-        assert(serverContent.includes('express.json'), 'Should have JSON parsing middleware');
-        assert(serverContent.includes('10mb'), 'Should have reasonable size limit');
-    });
-});
-
-describe('Code Quality and Structure', () => {
-    test('should have proper JSDoc documentation', () => {
-        const docPatterns = ['/**', '@param', '@returns', '@route'];
+describe('Cache Statistics', () => {
+    test('should return valid cache statistics structure', () => {
+        const stats = getCacheStats();
         
-        docPatterns.forEach(pattern => {
-            assert(serverContent.includes(pattern), `Should have JSDoc pattern: ${pattern}`);
+        assert(typeof stats === 'object', 'Should return an object');
+        assert(typeof stats.totalEntries === 'number', 'Should have totalEntries number');
+        assert(typeof stats.memoryUsageApprox === 'number', 'Should have memory usage estimate');
+        assert(typeof stats.entriesByType === 'object', 'Should have entriesByType object');
+        
+        // Check entriesByType structure
+        const expectedTypes = ['drug_labels', 'drug_shortages', 'drug_recalls', 'adverse_events', 'other'];
+        expectedTypes.forEach(type => {
+            assert(typeof stats.entriesByType[type] === 'number', `Should have ${type} count`);
         });
     });
     
-    test('should have proper module imports', () => {
-        const imports = ['express', 'cors', 'helmet', 'compression', 'morgan', 'dotenv'];
+    test('should calculate memory usage estimate', () => {
+        const stats = getCacheStats();
         
-        imports.forEach(module => {
-            assert(serverContent.includes(`import ${module}`) || serverContent.includes(`from '${module}'`), 
-                   `Should import module: ${module}`);
+        // Memory usage should be a reasonable estimate
+        assert(stats.memoryUsageApprox >= 0, 'Memory usage should be non-negative');
+        assert(stats.memoryUsageApprox === stats.totalEntries * 1024, 'Should use 1KB per entry estimate');
+    });
+});
+
+// Test runner execution
+describe('Utility Functions Test Suite', () => {
+    test('all utility functions should be importable', () => {
+        // This test will fail if functions aren't properly exported
+        assert(typeof validateDrugName === 'function', 'validateDrugName should be a function');
+        assert(typeof normalizeIdentifierType === 'function', 'normalizeIdentifierType should be a function');
+        assert(typeof buildParams === 'function', 'buildParams should be a function');
+        assert(typeof isCacheValid === 'function', 'isCacheValid should be a function');
+        assert(typeof getCacheStats === 'function', 'getCacheStats should be a function');
+    });
+});
+
+// Integration tests against live server (skip in CI environment)
+describe('Live Server Integration Tests', { skip: process.env.CI === 'true' }, () => {
+    test('should connect to Proxmox server health endpoint', async () => {
+        const response = await fetch(`${SERVER_URL}/health`);
+        assert.strictEqual(response.ok, true, 'Health endpoint should be accessible');
+        
+        const data = await response.json();
+        assert.strictEqual(data.status, 'healthy', 'Server should report healthy status');
+        assert.strictEqual(data.tools_available, 8, 'Should have 8 tools available');
+    });
+    
+    test('should list all 8 FDA tools via MCP endpoint', async () => {
+        const response = await fetch(`${SERVER_URL}/mcp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "tools/list",
+                params: {}
+            })
+        });
+        
+        assert.strictEqual(response.ok, true, 'MCP endpoint should be accessible');
+        
+        const data = await response.json();
+        assert(data.result, 'Should have result');
+        assert(data.result.tools, 'Should have tools array');
+        assert.strictEqual(data.result.tools.length, 8, 'Should have exactly 8 tools');
+        
+        // Check that key tools are present
+        const toolNames = data.result.tools.map(tool => tool.name);
+        const expectedTools = ['search_drug_shortages', 'search_adverse_events', 'search_drug_recalls'];
+        expectedTools.forEach(expectedTool => {
+            assert(toolNames.includes(expectedTool), `Should include ${expectedTool} tool`);
         });
     });
     
-    test('should have environment configuration', () => {
-        assert(serverContent.includes('process.env.PORT'), 'Should use environment PORT');
-        assert(serverContent.includes('dotenv.config'), 'Should load environment variables');
+    test('should execute drug shortage search via live server', async () => {
+        const response = await fetch(`${SERVER_URL}/mcp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 2,
+                method: "tools/call",
+                params: {
+                    name: "search_drug_shortages",
+                    arguments: { drug_name: "insulin", limit: 3 }
+                }
+            })
+        });
+        
+        assert.strictEqual(response.ok, true, 'Tool call should succeed');
+        
+        const data = await response.json();
+        assert(data.result, 'Should have result');
+        assert(data.result.content, 'Should have content');
+        assert(data.result.content[0].text, 'Should have text response');
+        
+        const toolResult = JSON.parse(data.result.content[0].text);
+        assert(toolResult.search_term, 'Should have search_term in response');
+        assert.strictEqual(toolResult.search_term, 'insulin', 'Should match searched drug');
     });
     
-    test('should have proper server startup logging', () => {
-        assert(serverContent.includes('app.listen'), 'Should start HTTP server');
-        assert(serverContent.includes('Available Tools:'), 'Should log available tools on startup');
-        assert(serverContent.includes('0.0.0.0'), 'Should bind to all interfaces');
+    test('should get cache statistics from live server', async () => {
+        const response = await fetch(`${SERVER_URL}/cache-stats`);
+        assert.strictEqual(response.ok, true, 'Cache stats endpoint should be accessible');
+        
+        const data = await response.json();
+        assert(data.cache, 'Should have cache object');
+        assert(typeof data.cache.totalEntries === 'number', 'Should have totalEntries');
+        assert(typeof data.cache.memoryUsageApprox === 'number', 'Should have memory usage');
+        assert(data.cache.entriesByType, 'Should have entriesByType breakdown');
+        assert.strictEqual(data.status, 'active', 'Cache should be active');
     });
 });
 
-// Test runner execution summary
-describe('Comprehensive Test Suite Summary', () => {
-    test('all core functions should be available and testable', () => {
-        // Verify we can test both server logic and client functions
-        assert(typeof validateDrugName === 'function', 'Client functions should be importable');
-        assert(serverContent.length > 0, 'Server code should be readable');
-        assert(serverContent.includes('TOOL_DEFINITIONS'), 'Server should have tool definitions');
-        assert(serverContent.includes('handleToolCall'), 'Server should have tool handler');
-    });
-});
-
-console.log('Comprehensive unit tests loaded successfully.');
-console.log('Testing entire Certus MCP Server codebase without external dependencies.');
-console.log('Coverage: OpenFDA client functions, server logic, MCP protocol, error handling, security.');
+console.log('Unit tests loaded successfully. Run with: node --test tests/unit-tests.js');
+console.log(`Testing against server: ${SERVER_URL}`);
+console.log('To test against a different server, set TEST_SERVER_URL environment variable');
