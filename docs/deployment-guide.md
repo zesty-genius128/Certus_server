@@ -13,6 +13,7 @@ Complete guide for deploying your own Certus MCP Server.
 ### Quick Start
 
 For healthcare environments (recommended - no root privileges required):
+
 ```bash
 docker run -d -p 3000:443 \
   --name certus-server \
@@ -21,6 +22,7 @@ docker run -d -p 3000:443 \
 ```
 
 For production with port 443 (requires root/sudo):
+
 ```bash
 sudo docker run -d -p 443:443 \
   --name certus-server \
