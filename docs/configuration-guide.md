@@ -18,12 +18,14 @@ NODE_ENV=development
 ## FDA API Key Setup
 
 **Why get an API key:**
+
 - Without key: 1,000 requests/day limit
 - With key: 120,000 requests/day limit
 - Avoids rate limiting issues
 
 **Getting an API key:**
-1. Visit: https://open.fda.gov/apis/authentication/
+
+1. Visit: <https://open.fda.gov/apis/authentication/>
 2. Click "Get API Key"
 3. Fill out the registration form
 4. Check your email for the API key
@@ -41,6 +43,7 @@ docker run -e OPENFDA_API_KEY=your_key ghcr.io/zesty-genius128/certus_server:lat
 ## Port Configuration
 
 **Common ports:**
+
 - Development: 3000, 8080
 - Production: 443 (requires root), 80
 
@@ -53,6 +56,7 @@ PORT=443
 ```
 
 **Docker port mapping:**
+
 ```bash
 # Maps container port 443 to host port 3000
 docker run -p 3000:443 ghcr.io/zesty-genius128/certus_server:latest
@@ -61,6 +65,7 @@ docker run -p 3000:443 ghcr.io/zesty-genius128/certus_server:latest
 ## Basic Docker Setup
 
 **Environment variables in Docker:**
+
 ```bash
 docker run -d \
   -p 3000:443 \
@@ -71,6 +76,7 @@ docker run -d \
 ```
 
 **Docker Compose:**
+
 ```yaml
 version: '3.8'
 services:
@@ -100,6 +106,7 @@ The server provides 8 FDA drug information tools:
 ## Common Issues
 
 **Server won't start:**
+
 ```bash
 # Check if port is in use
 lsof -i :3000
@@ -109,6 +116,7 @@ PORT=3001 npm start
 ```
 
 **API key not working:**
+
 ```bash
 # Test if API key is loaded
 curl http://localhost:3000/health
@@ -116,6 +124,7 @@ curl http://localhost:3000/health
 ```
 
 **Docker permission issues:**
+
 ```bash
 # Use non-privileged port
 docker run -p 3000:443 ghcr.io/zesty-genius128/certus_server:latest

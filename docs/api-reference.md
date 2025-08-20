@@ -9,30 +9,34 @@ Certus connects to official FDA (Food and Drug Administration) databases through
 ### API Endpoints Used
 
 **Drug Shortages:**
+
 - URL: `https://api.fda.gov/drug/shortage.json`
-- Documentation: https://open.fda.gov/apis/drug/shortage/
+- Documentation: <https://open.fda.gov/apis/drug/shortage/>
 - Purpose: Current drug shortage information
 
 **Drug Labels:**
+
 - URL: `https://api.fda.gov/drug/label.json`
-- Documentation: https://open.fda.gov/apis/drug/label/
+- Documentation: <https://open.fda.gov/apis/drug/label/>
 - Purpose: FDA-approved prescribing information
 
 **Drug Enforcement (Recalls):**
+
 - URL: `https://api.fda.gov/drug/enforcement.json`
-- Documentation: https://open.fda.gov/apis/drug/enforcement/
+- Documentation: <https://open.fda.gov/apis/drug/enforcement/>
 - Purpose: Drug recalls and safety alerts
 
 **Adverse Events (FAERS):**
+
 - URL: `https://api.fda.gov/drug/event.json`
-- Documentation: https://open.fda.gov/apis/drug/event/
+- Documentation: <https://open.fda.gov/apis/drug/event/>
 - Purpose: Reported side effects and adverse reactions
 
 ### Rate Limits
 
 - **Without API key:** 1,000 requests per day
 - **With API key:** 120,000 requests per day
-- **Get API key:** https://open.fda.gov/apis/authentication/
+- **Get API key:** <https://open.fda.gov/apis/authentication/>
 
 ### Data Format
 
@@ -42,13 +46,14 @@ All APIs return JSON data in OpenFDA format. Certus preserves the original FDA d
 
 For detailed parameter documentation, search examples, and response formats, see:
 
-**OpenFDA Official Documentation:** https://open.fda.gov/apis/
+**OpenFDA Official Documentation:** <https://open.fda.gov/apis/>
 
 **Specific API Guides:**
-- Drug Shortage API: https://open.fda.gov/apis/drug/shortage/
-- Drug Label API: https://open.fda.gov/apis/drug/label/
-- Drug Enforcement API: https://open.fda.gov/apis/drug/enforcement/
-- Adverse Events API: https://open.fda.gov/apis/drug/event/
+
+- Drug Shortage API: <https://open.fda.gov/apis/drug/shortage/>
+- Drug Label API: <https://open.fda.gov/apis/drug/label/>
+- Drug Enforcement API: <https://open.fda.gov/apis/drug/enforcement/>
+- Adverse Events API: <https://open.fda.gov/apis/drug/event/>
 
 ### Usage Notes
 

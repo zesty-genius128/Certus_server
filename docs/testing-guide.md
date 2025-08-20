@@ -29,6 +29,7 @@ npx @modelcontextprotocol/inspector https://your-server.com/mcp
 ```
 
 The inspector will:
+
 - Connect to your MCP server
 - List available tools (should show 8 FDA tools)
 - Test JSON-RPC protocol compliance
@@ -152,12 +153,14 @@ curl http://localhost:3000/health | jq .api_health.api_key_configured
 ## Test Results
 
 **Successful test indicators:**
+
 - Health endpoint returns `{"status":"healthy"}`
 - MCP inspector connects without errors
 - Tool tests return JSON responses (not 404/500 errors)
 - Unit tests pass without failures
 
 **Common failure patterns:**
+
 - HTTP 429: Rate limiting (wait or restart server)
 - HTTP 404: Wrong URL or server not running
 - Connection refused: Server not started or wrong port
