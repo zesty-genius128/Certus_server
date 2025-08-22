@@ -1,10 +1,10 @@
 const OPENFDA_API_KEY = process.env.OPENFDA_API_KEY;
 const BASE_URL = "https://api.fda.gov";
 
-// In-memory cache for FDA API responses
+// Cache for FDA API data
 const cache = new Map();
 
-// Cache TTL settings (in minutes)
+// Cache expiry times
 const CACHE_TTL = {
     DRUG_LABELS: 24 * 60,      // 24 hours - static data
     DRUG_SHORTAGES: 30,        // 30 minutes - supply changes rapidly
@@ -12,7 +12,7 @@ const CACHE_TTL = {
     ADVERSE_EVENTS: 60         // 1 hour - balance safety freshness with performance
 };
 
-// Core API endpoints
+// FDA API URLs
 const ENDPOINTS = {
     DRUG_LABEL: `${BASE_URL}/drug/label.json`,
     DRUG_SHORTAGES: `${BASE_URL}/drug/shortages.json`,
@@ -21,10 +21,10 @@ const ENDPOINTS = {
 };
 
 /**
- * Validate drug name input with helpful error messages
- * @param {string} drugName - The drug name to validate
- * @param {string} context - Context for error message (e.g., "shortages", "recalls")
- * @returns {Object|null} - Returns error object if invalid, null if valid
+ * Validate drug name input
+ * @param {string} drugName 
+ * @param {string} context 
+ * @returns {Object|null} 
  */
 function validateDrugName(drugName, context = "drug information") {
     if (!drugName || typeof drugName !== 'string' || !drugName.trim()) {
@@ -45,12 +45,11 @@ function validateDrugName(drugName, context = "drug information") {
 }
 
 /**
- * Enhanced FDA API error classification system
- * Provides intelligent error handling with actionable user guidance
- * @param {Error} error - The caught error object
- * @param {Response} response - The HTTP response object (if available)
- * @param {string} url - The FDA API URL that was called
- * @returns {Object} - Classified error with user guidance
+ * Handle FDA API errors
+ * @param {Error} error 
+ * @param {Response} response 
+ * @param {string} url 
+ * @returns {Object} 
  */
 function classifyFDAError(error, response, url) {
     const classification = {
@@ -127,12 +126,11 @@ function classifyFDAError(error, response, url) {
 }
 
 /**
- * Enhanced API request with intelligent retry logic
- * Automatically retries appropriate errors with exponential backoff
- * @param {string} url - FDA API endpoint URL
- * @param {URLSearchParams} params - Query parameters
- * @param {number} maxRetries - Maximum number of retry attempts
- * @returns {Promise<Object>} - API response or classified error
+ * Make FDA API request with retry logic
+ * @param {string} url 
+ * @param {URLSearchParams} params 
+ * @param {number} maxRetries 
+ * @returns {Promise<Object>} 
  */
 async function enhancedFDARequest(url, params, maxRetries = 2) {
     const fullUrl = `${url}?${params}`;
@@ -222,10 +220,10 @@ function buildParams(search, limit = 10, additionalParams = {}) {
 }
 
 /**
- * Check if cached data is still valid
- * @param {Object} cacheItem - Cache entry with data and timestamp
- * @param {number} ttlMinutes - Time to live in minutes
- * @returns {boolean} - True if cache is valid
+ * Check if cache is still valid
+ * @param {Object} cacheItem 
+ * @param {number} ttlMinutes 
+ * @returns {boolean} 
  */
 function isCacheValid(cacheItem, ttlMinutes) {
     if (!cacheItem) return false;
@@ -235,8 +233,7 @@ function isCacheValid(cacheItem, ttlMinutes) {
 }
 
 /**
- * Clean expired entries from cache
- * Removes entries that have exceeded their TTL for any cache type
+ * Clean expired cache entries
  */
 function cleanExpiredCache() {
     const now = Date.now();
@@ -272,8 +269,8 @@ function cleanExpiredCache() {
 }
 
 /**
- * Get cache statistics for monitoring
- * @returns {Object} Cache statistics including size, hit rates, memory usage
+ * Get cache statistics
+ * @returns {Object} 
  */
 function getCacheStats() {
     const stats = {
@@ -308,10 +305,10 @@ function getCacheStats() {
 
 /**
  * Get data from cache or fetch from API
- * @param {string} cacheKey - Unique cache key
- * @param {Function} fetchFunction - Function to fetch data if cache miss
- * @param {number} ttlMinutes - Cache TTL in minutes
- * @returns {Promise<Object>} - Cached or fresh data
+ * @param {string} cacheKey 
+ * @param {Function} fetchFunction 
+ * @param {number} ttlMinutes 
+ * @returns {Promise<Object>} 
  */
 async function getCachedOrFetch(cacheKey, fetchFunction, ttlMinutes) {
     const cacheItem = cache.get(cacheKey);
@@ -334,8 +331,7 @@ async function getCachedOrFetch(cacheKey, fetchFunction, ttlMinutes) {
 }
 
 /**
- * Enhanced API request handler with intelligent error handling
- * Replaces the old makeRequest function with retry logic and user-friendly errors
+ * Make API request with error handling
  */
 async function makeRequest(url, params) {
     try {
@@ -368,11 +364,11 @@ async function makeRequest(url, params) {
 }
 
 /**
- * Generic search strategy executor - consolidates redundant search loop patterns
- * @param {Array<string>} searchStrategies - Array of search query strings to try
- * @param {string} endpoint - FDA API endpoint URL to query
- * @param {number} limit - Maximum number of results to fetch
- * @returns {Promise<Object|null>} - Returns FDA API response data or null if no results
+ * Execute search strategies until one works
+ * @param {Array<string>} searchStrategies 
+ * @param {string} endpoint 
+ * @param {number} limit 
+ * @returns {Promise<Object|null>} 
  */
 async function performSearchStrategies(searchStrategies, endpoint, limit) {
     for (const search of searchStrategies) {
@@ -398,7 +394,7 @@ async function performSearchStrategies(searchStrategies, endpoint, limit) {
  * Returns raw openFDA data with minimal processing
  */
 export async function searchDrugShortages(drugName, limit = 10) {
-    // Enhanced input validation with helpful messages
+    // Input validation
     const validationError = validateDrugName(drugName, "shortages");
     if (validationError) {
         return validationError;
@@ -437,7 +433,7 @@ export async function searchDrugShortages(drugName, limit = 10) {
         };
     }
 
-    // Enhanced no results message
+    // No results found
     return {
         search_term: drugName,
         results: [],
@@ -455,7 +451,7 @@ export async function searchDrugShortages(drugName, limit = 10) {
  * Returns raw openFDA label data
  */
 export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openfda.generic_name") {
-    // Enhanced input validation
+    // Input validation
     const validationError = validateDrugName(drugIdentifier, "drug information");
     if (validationError) {
         return validationError;
@@ -504,7 +500,7 @@ export async function fetchDrugLabelInfo(drugIdentifier, identifierType = "openf
  * Returns raw openFDA enforcement data
  */
 export async function searchDrugRecalls(drugName, limit = 10) {
-    // Enhanced input validation
+    // Input validation
     const validationError = validateDrugName(drugName, "recalls");
     if (validationError) {
         return validationError;
@@ -534,7 +530,7 @@ export async function searchDrugRecalls(drugName, limit = 10) {
         };
     }
 
-    // Enhanced no results message
+    // No results found
     return {
         search_term: drugName,
         results: [],
@@ -633,7 +629,7 @@ export async function analyzeDrugShortageTrends(drugName, monthsBack = 12) {
  * Simplified to return raw results array
  */
 export async function batchDrugAnalysis(drugList, includeTrends = false) {
-    // Enhanced input validation
+    // Input validation
     if (!Array.isArray(drugList) || drugList.length === 0) {
         return {
             error: "Please provide a list of medication names for batch analysis",
@@ -703,7 +699,7 @@ export async function batchDrugAnalysis(drugList, includeTrends = false) {
  * Combines label and shortage data with minimal processing
  */
 export async function getMedicationProfile(drugIdentifier, identifierType = "openfda.generic_name") {
-    // Enhanced input validation
+    // Input validation
     const validationError = validateDrugName(drugIdentifier, "drug information");
     if (validationError) {
         return validationError;
@@ -747,16 +743,14 @@ export async function getMedicationProfile(drugIdentifier, identifierType = "ope
 }
 
 /**
- * Search for FDA adverse event reports (FAERS database) with hybrid response
- * Returns summarized data by default, full raw data when detailed=true
- * 
- * @param {string} drugName - Name of the drug to search for adverse events
- * @param {number} [limit=5] - Maximum number of reports to return (1-50)
- * @param {boolean} [detailed=false] - Return full raw FDA data or summary
- * @returns {Promise<Object>} FDA FAERS data with adverse event reports
+ * Search FDA adverse event database
+ * @param {string} drugName 
+ * @param {number} limit 
+ * @param {boolean} detailed 
+ * @returns {Promise<Object>} 
  */
 export async function searchAdverseEvents(drugName, limit = 5, detailed = false) {
-    // Enhanced input validation with helpful messages
+    // Input validation
     const validationError = validateDrugName(drugName, "adverse events");
     if (validationError) {
         return validationError;
@@ -808,7 +802,7 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
         return summary;
     }
 
-    // Enhanced no results message
+    // No results found
     return {
         search_term: drugName,
         results: [],
@@ -823,16 +817,14 @@ export async function searchAdverseEvents(drugName, limit = 5, detailed = false)
 }
 
 /**
- * Search for serious adverse events only (death, hospitalization, disability) with hybrid response
- * Returns summarized data by default, full raw data when detailed=true
- * 
- * @param {string} drugName - Name of the drug to search for serious adverse events
- * @param {number} [limit=5] - Maximum number of serious adverse event reports to return (1-50)
- * @param {boolean} [detailed=false] - Return full raw FDA data or summary
- * @returns {Promise<Object>} FDA FAERS data with serious adverse events only
+ * Search for serious adverse events only
+ * @param {string} drugName 
+ * @param {number} limit 
+ * @param {boolean} detailed 
+ * @returns {Promise<Object>} 
  */
 export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed = false) {
-    // Enhanced input validation
+    // Input validation
     const validationError = validateDrugName(drugName, "serious adverse events");
     if (validationError) {
         return validationError;
@@ -893,8 +885,8 @@ export async function searchSeriousAdverseEvents(drugName, limit = 5, detailed =
 /**
  * Generate summary for general adverse events from FDA FAERS data
  * 
- * @param {Object} data - Raw FDA FAERS API response data
- * @param {string} drugName - Name of the drug being analyzed
+ * @param {Object} data 
+ * @param {string} drugName
  * @returns {Object} Summarized adverse event data with top reactions and key insights
  */
 function generateAdverseEventSummary(data, drugName) {
@@ -954,8 +946,8 @@ function generateAdverseEventSummary(data, drugName) {
 /**
  * Generate summary for serious adverse events from FDA FAERS data
  * 
- * @param {Object} data - Raw FDA FAERS API response data for serious events only
- * @param {string} drugName - Name of the drug being analyzed
+ * @param {Object} data
+ * @param {string} drugName
  * @returns {Object} Summarized serious adverse event data with event types and safety alerts
  */
 function generateSeriousEventSummary(data, drugName) {
@@ -1025,8 +1017,8 @@ function generateSeriousEventSummary(data, drugName) {
 /**
  * Generate key insights for general adverse events based on reaction patterns
  * 
- * @param {Array} topReactions - Array of top reported reactions with counts
- * @param {number} seriousPercentage - Percentage of serious events in the sample
+ * @param {Array} topReactions
+ * @param {number} seriousPercentage
  * @returns {Array<string>} Array of insight strings for user guidance
  */
 function generateKeyInsights(topReactions, seriousPercentage) {
@@ -1050,8 +1042,8 @@ function generateKeyInsights(topReactions, seriousPercentage) {
 /**
  * Generate safety alert for serious events based on event types and reactions
  * 
- * @param {Object} seriousTypes - Object containing counts of different serious event types
- * @param {Array} topReactions - Array of top reported reactions in serious events
+ * @param {Object} seriousTypes
+ * @param {Array} topReactions
  * @returns {Array<string>} Array of safety alert strings for medical awareness
  */
 function generateSafetyAlert(seriousTypes, topReactions) {
@@ -1112,14 +1104,14 @@ export async function healthCheck() {
     };
 }
 
-// Initialize periodic cache cleanup (runs every hour)
+// Clean cache every hour
 const CLEANUP_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
 setInterval(() => {
     console.log('Starting periodic cache cleanup...');
     cleanExpiredCache();
 }, CLEANUP_INTERVAL);
 
-// Export cache management functions for potential external use
+// Export functions
 export { 
     getCacheStats, 
     cleanExpiredCache,
