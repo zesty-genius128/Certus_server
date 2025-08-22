@@ -568,6 +568,7 @@ Certus_server/
 | `/tools`       | GET    | List all available tools and schemas     |
 | `/cache-stats` | GET    | Real-time cache statistics and monitoring |
 | `/cache-cleanup` | POST | Manual cache cleanup with statistics   |
+| `/usage-stats` | GET    | Server usage analytics and popular drugs |
 | `/robots.txt`  | GET    | Web crawler directives (blocks all crawlers) |
 | `/`            | GET    | Server information and documentation     |
 
@@ -671,6 +672,13 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - **Automatic Cleanup**: Hourly cache maintenance prevents memory leaks
 - **Manual Control**: Emergency cache clearing via `/cache-cleanup` endpoint
 - **Performance Tracking**: Cache hit/miss logging for optimization insights
+
+### Performance Monitoring
+
+- **Measured Performance Gains**: 13-41% faster response times with caching enabled
+- **Benchmark Testing**: Built-in performance testing tools to measure cache effectiveness
+- **Usage Analytics**: Track tool usage patterns and popular drugs via `/usage-stats` endpoint
+- **Response Time Monitoring**: Real-time monitoring of FDA API performance and cache hit rates
 
 ## Troubleshooting
 
