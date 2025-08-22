@@ -59,9 +59,9 @@ const usageAnalytics = {
 };
 
 /**
- * Log usage analytics for monitoring and insights
- * @param {string} type - Type of analytics event
- * @param {Object} data - Event data to log
+ * Track usage stats
+ * @param {string} type 
+ * @param {Object} data 
  */
 function logUsage(type, data) {
     const timestamp = new Date().toISOString();
@@ -604,11 +604,10 @@ app.get('/tools', (req, res) => {
 });
 
 /**
- * Main MCP Protocol endpoint - handles JSON-RPC 2.0 requests
- * Supports: initialize, ping, tools/list, tools/call
+ * Main MCP Protocol endpoint
  * @route POST /mcp
- * @param {Object} req.body - JSON-RPC 2.0 request
- * @returns {Object} JSON-RPC 2.0 response
+ * @param {Object} req.body 
+ * @returns {Object} 
  */
 app.post('/mcp', async (req, res) => {
     try {
@@ -699,10 +698,10 @@ app.post('/mcp', async (req, res) => {
 });
 
 /**
- * Handle individual tool calls with comprehensive error handling
- * @param {string} name - Tool name to execute
- * @param {Object} args - Tool arguments
- * @returns {Object} Tool execution result or error
+ * Handle tool calls and return results
+ * @param {string} name 
+ * @param {Object} args 
+ * @returns {Object} 
  */
 async function handleToolCall(name, args) {
     try {
