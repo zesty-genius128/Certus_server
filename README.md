@@ -6,6 +6,22 @@ Certus connects Claude, ChatGPT, and other AI assistants to official FDA databas
 
 This server gives you real-time access to FDA drug information including shortages, recalls, labels, and trend analysis.
 
+## What's New
+
+### August 2025 Updates
+
+**Performance & Monitoring:**
+- **13-41% faster response times** with intelligent medical-safety caching
+- **Usage analytics endpoint** (`/usage-stats`) for real-time server insights  
+- **Performance benchmarking tools** to measure cache effectiveness
+- **Professional documentation standards** with automated markdown linting
+
+**Enhanced Reliability:**
+- **Automated CI/CD pipeline** with multi-Node.js testing (18.x, 20.x, 22.x)
+- **MCP protocol compliance** validation for universal client compatibility
+- **Rate limiting improvements** with CI environment optimizations
+- **Comprehensive error handling** with intelligent FDA API fallback strategies
+
 ## Try the Live Chatbot
 
 **Test the Certus system immediately:** <https://certus-chat.opensource.mieweb.org>
