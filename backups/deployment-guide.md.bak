@@ -149,6 +149,144 @@ PORT=443
 NODE_ENV=production
 ```
 
+## Self-Hosted Server Deployment
+
+### VPS/Dedicated Server Setup
+
+```bash
+# Copy files to server
+scp -r . user@your-server:/opt/certus-server/
+
+# Connect to server and setup
+ssh user@your-server
+cd /opt/certus-server
+
+# Install dependencies
+npm install --production
+
+# Start server
+npm start
+```
+
+### Production Setup with PM2
+
+```bash
+# Install PM2 globally
+npm install -g pm2
+
+# Start with PM2
+pm2 start official-mcp-server.js --name certus-server
+
+# Configure auto-restart on boot
+pm2 save
+pm2 startup
+
+# Monitor the application
+pm2 monit
+
+# View logs
+pm2 logs certus-server
+```
+
+### Nginx Reverse Proxy Setup
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+### SSL Certificate with Let's Encrypt
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Get SSL certificate
+sudo certbot --nginx -d your-domain.com
+
+# Auto-renewal setup
+sudo crontab -e
+# Add line: 0 12 * * * /usr/bin/certbot renew --quiet
+```
+
+## Proxmox Container Deployment
+
+### LXC Container Setup
+
+```bash
+# Create Ubuntu 22.04 LXC container
+pct create 200 ubuntu-22.04-standard_22.04-1_amd64.tar.zst \
+  --memory 2048 \
+  --cores 2 \
+  --hostname certus-server \
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp
+
+# Start container
+pct start 200
+
+# Enter container
+pct enter 200
+
+# Install Node.js
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt-get install -y nodejs
+
+# Clone and setup Certus
+git clone https://github.com/zesty-genius128/Certus_server.git /opt/certus-server
+cd /opt/certus-server
+npm install --production
+```
+
+### Systemd Service Setup
+
+Create `/etc/systemd/system/certus-server.service`:
+
+```ini
+[Unit]
+Description=Certus OpenFDA MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=node
+WorkingDirectory=/opt/certus-server
+ExecStart=/usr/bin/node official-mcp-server.js
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=443
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```bash
+# Create node user
+useradd -r -s /bin/false node
+chown -R node:node /opt/certus-server
+
+# Enable and start service
+systemctl enable certus-server
+systemctl start certus-server
+systemctl status certus-server
+```
+
 ## Configuration After Deployment
 
 ### Connect Claude Desktop (Tested Working Method)
@@ -211,25 +349,75 @@ TEST_SERVER_URL=https://your-server.com npm run test:unit
 
 ## Monitoring and Maintenance
 
-### Health Check
+### Health Monitoring
 
 ```bash
-curl https://your-server.com/health
+# Continuous health check
+watch -n 30 'curl -s https://your-server.com/health | jq'
+
+# Cache statistics
+curl https://your-server.com/cache-stats
+
+# Manual cache cleanup
+curl -X POST https://your-server.com/cache-cleanup
+```
+
+### Log Monitoring
+
+```bash
+# PM2 logs
+pm2 logs certus-server --lines 100
+
+# Docker logs
+docker logs certus-server --tail 100 -f
+
+# System logs
+journalctl -u certus-server -f
 ```
 
 ### Updates
 
 ```bash
-# Docker update  
+# Docker update
 docker pull ghcr.io/zesty-genius128/certus_server:latest
-docker restart certus-server
+docker stop certus-server
+docker rm certus-server
+# Run docker run command again
+
+# Manual update
+git pull origin main
+npm install --production
+pm2 restart certus-server
 ```
 
-## Security
+## Security Considerations
 
-- Use environment variables for API keys
+### Firewall Configuration
+
+```bash
+# Allow HTTPS only
+ufw allow 443/tcp
+ufw allow 22/tcp  # SSH access
+ufw enable
+```
+
+### Regular Security Updates
+
+```bash
+# Ubuntu/Debian
+apt update && apt upgrade -y
+
+# Container updates
+docker pull ghcr.io/zesty-genius128/certus_server:latest
+```
+
+### Environment Security
+
+- Use environment variables for API keys (never commit to repository)
 - Enable HTTPS in production
-- Keep Docker image updated
+- Use non-root user for running the application  
+- Keep dependencies updated
+- Monitor security advisories for Node.js and dependencies
 
 ## Troubleshooting Deployment
 
