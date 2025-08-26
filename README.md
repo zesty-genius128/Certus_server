@@ -6,22 +6,6 @@ Certus connects Claude, ChatGPT, and other AI assistants to official FDA databas
 
 This server gives you real-time access to FDA drug information including shortages, recalls, labels, and trend analysis.
 
-## What's New
-
-### August 2025 Updates
-
-**Performance & Monitoring:**
-- **13-41% faster response times** with intelligent medical-safety caching
-- **Usage analytics endpoint** (`/usage-stats`) for real-time server insights  
-- **Performance benchmarking tools** to measure cache effectiveness
-- **Professional documentation standards** with automated markdown linting
-
-**Enhanced Reliability:**
-- **Automated CI/CD pipeline** with multi-Node.js testing (18.x, 20.x, 22.x)
-- **MCP protocol compliance** validation for universal client compatibility
-- **Rate limiting improvements** with CI environment optimizations
-- **Comprehensive error handling** with intelligent FDA API fallback strategies
-
 ## Try the Live Chatbot
 
 **Test the Certus system immediately:** <https://certus-chat.opensource.mieweb.org>
@@ -251,6 +235,8 @@ If the main server is unavailable, use the Railway backup:
 }
 ```
 
+**Note:** Railway deployment is currently stopped to preserve the $5 free credit. Use `railway up` to restart when needed.
+
 ### Step 2: Restart the App
 
 Close and reopen Claude Desktop/the MCP client completely. The drug information tools should now be available.
@@ -462,9 +448,10 @@ Get FDA adverse event data for metformin and check for any lactic acidosis repor
 
 ### Backup Deployment (Railway)
 
-- **Backup Server:** <https://certus-server-production.up.railway.app/mcp>
+- **Backup Server:** <https://certus-server-production.up.railway.app/mcp> (currently stopped)
 - **Status Check:** <https://certus-server-production.up.railway.app/health>
-- **Host:** Railway cloud platform
+- **Host:** Railway cloud platform  
+- **Note:** Stopped to preserve $5 free Railway credit. Use `railway up` to restart when needed.
 
 ### API Health Status
 
@@ -584,7 +571,6 @@ Certus_server/
 | `/tools`       | GET    | List all available tools and schemas     |
 | `/cache-stats` | GET    | Real-time cache statistics and monitoring |
 | `/cache-cleanup` | POST | Manual cache cleanup with statistics   |
-| `/usage-stats` | GET    | Server usage analytics and popular drugs |
 | `/robots.txt`  | GET    | Web crawler directives (blocks all crawlers) |
 | `/`            | GET    | Server information and documentation     |
 
@@ -688,13 +674,6 @@ Certus integrates with the following official FDA openFDA API endpoints to provi
 - **Automatic Cleanup**: Hourly cache maintenance prevents memory leaks
 - **Manual Control**: Emergency cache clearing via `/cache-cleanup` endpoint
 - **Performance Tracking**: Cache hit/miss logging for optimization insights
-
-### Performance Monitoring
-
-- **Measured Performance Gains**: 13-41% faster response times with caching enabled
-- **Benchmark Testing**: Built-in performance testing tools to measure cache effectiveness
-- **Usage Analytics**: Track tool usage patterns and popular drugs via `/usage-stats` endpoint
-- **Response Time Monitoring**: Real-time monitoring of FDA API performance and cache hit rates
 
 ## Troubleshooting
 
