@@ -111,7 +111,7 @@ npx @modelcontextprotocol/inspector http://localhost:3000/mcp
 
 ### Prerequisites
 
-- Railway account (free tier available)
+- Railway account (free tier available with $5 credit upon verification)
 - Railway CLI installed
 
 ### Deployment Steps
@@ -125,6 +125,8 @@ railway login
 railway init
 railway up
 ```
+
+**Note:** Railway offers $5 free credit when you verify your account. The current backup deployment has been manually stopped to preserve these credits. Use `railway up` to restart when needed.
 
 ### Railway Configuration
 
