@@ -4,6 +4,12 @@
 **Type:** Summer Internship Project  
 **Tech:** Node.js, Express, Docker, FDA APIs, MCP Protocol
 
+## Project Summary
+
+I built a drug information server that lets Claude and other AI tools look up current FDA data instead of using old information from training. You can try it at https://certus-chat.opensource.mieweb.org or add it to Claude Desktop using https://certus.opensource.mieweb.org/mcp.
+
+Started with Python, switched to JavaScript, figured out how to connect different AI clients, dealt with government APIs, and got everything running in production. The server handles real users and has 8 different FDA tools working. Code is available at https://github.com/zesty-genius128/Certus_server.
+
 ## Quick Start (3 Ways to Test)
 
 **Option 1 - Try the Chatbot Interface:**  

@@ -1,6 +1,6 @@
 # Documentation
 
-Basic documentation for Certus OpenFDA MCP Server.
+Comprehensive documentation for Certus OpenFDA MCP Server - an FDA drug information server that connects AI assistants to live FDA databases for current drug shortages, recalls, labels, and adverse events.
 
 ## Available Guides
 

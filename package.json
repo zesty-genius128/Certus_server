@@ -1,6 +1,6 @@
 {
   "name": "certus-drug-information-mcp-server",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Comprehensive MCP server for FDA drug information including shortages, recalls, labels, and market analysis",
   "type": "module",
   "main": "official-mcp-server.js",
